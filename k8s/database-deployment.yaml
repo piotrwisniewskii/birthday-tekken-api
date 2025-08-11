@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: birthday-db
+  namespace: birthday-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: birthday-db
+  template:
+    metadata:
+      labels:
+        app: birthday-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14
+        env:
+        - name: POSTGRES_DB
+          value: birthdaydb
+        - name: POSTGRES_USER
+          value: birthdayuser
+        - name: POSTGRES_PASSWORD
+          value: birthdaypass
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-storage
+      volumes:
+      - name: postgres-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: birthday-db
+  namespace: birthday-app
+spec:
+  selector:
+    app: birthday-db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+  type: ClusterIP
+

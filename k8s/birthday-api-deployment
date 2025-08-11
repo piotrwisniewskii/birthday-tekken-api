@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: birthday-api
+  namespace: birthday-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: birthday-api
+  template:
+    metadata:
+      labels:
+        app: birthday-api
+    spec:
+      containers:
+      - name: birthday-api
+        image: piotrwisniewskii/birthday-tekken-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "birthday-db"
+        - name: QUEUE_HOST
+          value: "rabbitmq"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: birthday-api
+  namespace: birthday-app
+spec:
+  selector:
+    app: birthday-api
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+
