@@ -123,6 +123,7 @@ public class TournamentService {
 			List<Match> nextMatches = generateMatches();
 			state.setCurrentMatches(nextMatches);
 		}
+
 	}
 
 	public void submitThirdPlaceResult(String winner) {
@@ -145,4 +146,14 @@ public class TournamentService {
 	public TournamentState getState() {
 		return state;
 	}
+
+	public Match addMatch(Match match) {
+		return matchRepository.save(match);
+	}
+
+
+	public List<Match> findAllMatches() {
+		return matchRepository.findAll();
+	}
+
 }

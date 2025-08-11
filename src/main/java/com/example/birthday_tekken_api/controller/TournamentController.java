@@ -2,6 +2,7 @@ package com.example.birthday_tekken_api.controller;
 
 import com.example.birthday_tekken_api.model.Match;
 import com.example.birthday_tekken_api.model.TournamentState;
+import com.example.birthday_tekken_api.service.MatchRepository;
 import com.example.birthday_tekken_api.service.TournamentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,4 +41,10 @@ public class TournamentController {
         tournamentService.submitThirdPlaceResult(winner);
         return ResponseEntity.ok(tournamentService.getState());
     }
+
+    @GetMapping("/matches/all")
+    public ResponseEntity<List<Match>> getAllMatches() {
+        return ResponseEntity.ok(tournamentService.findAllMatches());
+    }
+
 }
