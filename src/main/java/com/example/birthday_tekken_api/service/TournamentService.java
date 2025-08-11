@@ -8,8 +8,13 @@ import java.util.*;
 @Service
 public class TournamentService {
 	private final TournamentState state = new TournamentState();
+	private final MatchRepository matchRepository;
 
-	public void start(List<String> players) {
+    public TournamentService(MatchRepository matchRepository) {
+        this.matchRepository = matchRepository;
+    }
+
+    public void start(List<String> players) {
 		if (players.size() < 2) {
 			throw new IllegalArgumentException("Tournament requires at least 2 players");
 		}

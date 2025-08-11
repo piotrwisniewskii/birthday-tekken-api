@@ -1,11 +1,20 @@
 package com.example.birthday_tekken_api.model;
 
+import jakarta.persistence.*;
+
+@Entity
 public class Match {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String player1;
     private String player2;
     private String winner;
     private String round;
     private boolean byeMatch;
+
+    public Match() {}
 
     public Match(String player1, String player2, String round) {
         this.player1 = player1;
