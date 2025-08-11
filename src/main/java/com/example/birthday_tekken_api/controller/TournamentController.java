@@ -1,0 +1,43 @@
+package com.example.birthday_tekken_api.controller;
+
+import com.example.birthday_tekken_api.model.Match;
+import com.example.birthday_tekken_api.model.TournamentState;
+import com.example.birthday_tekken_api.service.TournamentService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/tournament")
+@CrossOrigin(origins = "*")
+public class TournamentController {
+    private final TournamentService tournamentService;
+
+    public TournamentController(TournamentService tournamentService) {
+        this.tournamentService = tournamentService;
+    }
+
+    @PostMapping("/start")
+    public ResponseEntity<TournamentState> start(@RequestBody List<String> players) {
+        tournamentService.start(players);
+        return ResponseEntity.ok(tournamentService.getState());
+    }
+
+    @GetMapping("/state")
+    public ResponseEntity<TournamentState> getState() {
+        return ResponseEntity.ok(tournamentService.getState());
+    }
+
+    @PostMapping("/submit-results")
+    public ResponseEntity<TournamentState> submitResults(@RequestBody List<Match> results) {
+        tournamentService.submitResults(results);
+        return ResponseEntity.ok(tournamentService.getState());
+    }
+
+    @PostMapping("/submit-third-place")
+    public ResponseEntity<TournamentState> submitThirdPlace(@RequestParam String winner) {
+        tournamentService.submitThirdPlaceResult(winner);
+        return ResponseEntity.ok(tournamentService.getState());
+    }
+}
