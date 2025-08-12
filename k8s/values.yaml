@@ -1,0 +1,41 @@
+namespace: birthday
+app:
+  image:
+    repository: piowisni/birthday-tekken-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+postgresql:
+  enabled: true
+  image: postgres:16-alpine
+  username: postgres
+  password: changeme
+  database: birthdaydb
+  storage: 2Gi
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+service:
+  type: ClusterIP
+  port: 8080
+istio:
+  enabled: true
+  gateway:
+    enabled: true
+    port: 80
+    name: birthday-gateway
+  virtualService:
+    host: birthday.local
+
+# When false, skip namespace template creation entirely
+createNamespace: false

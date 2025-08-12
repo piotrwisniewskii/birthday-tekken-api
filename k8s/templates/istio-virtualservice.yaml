@@ -1,0 +1,21 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: birthday-api
+  namespace: {{ .Values.namespace }}
+spec:
+  hosts:
+    - {{ .Values.istio.virtualService.host }}
+  gateways:
+    - {{ .Values.istio.gateway.name }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: birthday-api.{{ .Values.namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.service.port }}
+{{- end }}

@@ -1,0 +1,4 @@
+apiVersion: v2
+name: birthday-tekken-chart
+description: Birthday Tekken API with PostgreSQL and Istio
+version: 0.1.0

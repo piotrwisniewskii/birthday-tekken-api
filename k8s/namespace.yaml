@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: birthday-app
-  labels:
-    istio-injection: enabled
-
