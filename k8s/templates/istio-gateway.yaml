@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   selector:
-    istio: ingressgateway # Might need adjustment to your cluster's gateway name
+    istio: ingressgateway
   servers:
     - port:
         number: {{ .Values.istio.gateway.port }}
@@ -14,4 +14,4 @@ spec:
         protocol: HTTP
       hosts:
         - "*"
-{{- end }}
+  {{- end }}

@@ -97,25 +97,20 @@
         }
 
         fetch('/api/tournament/start', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(players)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(state => {
-                currentState = state;
-                showTournament();
-                updateDisplay();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error starting tournament');
-            });
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify(players)
+})
+.then(async (res) => {
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+})
+.then(state => { currentState = state; showTournament(); updateDisplay(); })
+.catch(err => { alert(err.message || 'Error starting tournament'); });
+
     }
 
     function showTournament() {

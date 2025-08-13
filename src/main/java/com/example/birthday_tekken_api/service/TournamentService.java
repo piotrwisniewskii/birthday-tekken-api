@@ -10,16 +10,28 @@ public class TournamentService {
 	private final TournamentState state = new TournamentState();
 	private final MatchRepository matchRepository;
 
-    public TournamentService(MatchRepository matchRepository) {
-        this.matchRepository = matchRepository;
-    }
+	public TournamentService(MatchRepository matchRepository) {
+		this.matchRepository = matchRepository;
+	}
 
-    public void start(List<String> players) {
-		if (players.size() < 2) {
-			throw new IllegalArgumentException("Tournament requires at least 2 players");
+	public void start(List<String> players) {
+		// zrób wejście kuloodporne
+		List<String> cleaned = players == null ? List.of() :
+				players.stream()
+						.filter(Objects::nonNull)
+						.map(s -> s.replace("\r", ""))     // usuń CR z Windows
+						.map(String::trim)                 // przytnij spacje
+						.map(s -> s.replaceAll("\\|+$", "")) // zdejmij trailing |
+						.filter(s -> !s.isEmpty())         // usuń puste
+						.distinct()                        // usuń duplikaty
+						.toList();
+
+		if (cleaned.size() < 2) {
+			throw new IllegalArgumentException("Podaj co najmniej 2 nazwiska graczy (po jednej linii).");
 		}
+
 		state.getHistory().clear();
-		state.setCurrentPlayers(new ArrayList<>(players));
+		state.setCurrentPlayers(new ArrayList<>(cleaned));
 		state.setRound(1);
 		List<Match> matches = generateMatches();
 		state.setCurrentMatches(matches);
@@ -31,9 +43,10 @@ public class TournamentService {
 		state.setThirdPlaceMatch(null);
 	}
 
+
+
 	public List<Match> generateMatches() {
 		List<String> players = new ArrayList<>(state.getCurrentPlayers());
-		// Zapewnij lepszą losowość przez utworzenie nowego obiektu Random na każde shuffle
 		Collections.shuffle(players, new Random(System.nanoTime()));
 		List<Match> matches = new ArrayList<>();
 
@@ -58,8 +71,8 @@ public class TournamentService {
 		for (Match match : results) {
 			if (match.isByeMatch()) {
 				nextRound.add(match.getPlayer1());
-				// Byes też powinny być zapisane w historii:
 				state.getHistory().add(match);
+				matchRepository.save(match); // zapisujemy bye match
 				continue;
 			}
 			if (match.getWinner() == null ||
@@ -73,12 +86,18 @@ public class TournamentService {
 			nextRound.add(match.getWinner());
 		}
 
+		// zapis wszystkich normalnych meczów tej rundy
+		if (!submittedMatches.isEmpty()) {
+			matchRepository.saveAll(submittedMatches);
+		}
+
 		state.setCurrentPlayers(nextRound);
 
 		if (nextRound.size() == 1) {
 			state.setFinished(true);
 			state.setWinner(nextRound.get(0));
-			// Find the final match (non-bye), last from this submission. Runner-up is the loser.
+
+			// Ustal runner-up z finału
 			Match finalMatch = null;
 			for (int i = submittedMatches.size() - 1; i >= 0; i--) {
 				if (!submittedMatches.get(i).isByeMatch()) {
@@ -95,11 +114,10 @@ public class TournamentService {
 				state.setRunnerUp(null);
 			}
 
-			// Third-place match: znajdź przegranych z półfinałów (jeśli startowało co najmniej 4)
+			// Sprawdź potrzebę meczu o 3 miejsce
 			if (state.getHistory().size() >= 3) {
 				List<Match> history = state.getHistory();
 				List<String> semifinalLosers = new ArrayList<>();
-				// Skanuj od końca do przodu aż 2 przegranych
 				for (int i = history.size() - 2; i >= 0 && semifinalLosers.size() < 2; i--) {
 					Match m = history.get(i);
 					if (!m.isByeMatch()) {
@@ -123,7 +141,6 @@ public class TournamentService {
 			List<Match> nextMatches = generateMatches();
 			state.setCurrentMatches(nextMatches);
 		}
-
 	}
 
 	public void submitThirdPlaceResult(String winner) {
@@ -137,8 +154,8 @@ public class TournamentService {
 		}
 
 		thirdPlaceMatch.setWinner(winner);
-		// dodaj do historii trzeci mecz o miejsce:
 		state.getHistory().add(thirdPlaceMatch);
+		matchRepository.save(thirdPlaceMatch); // zapis meczu o 3 miejsce
 		state.setThirdPlace(winner);
 		state.setThirdPlaceMatchRequired(false);
 	}
@@ -151,9 +168,7 @@ public class TournamentService {
 		return matchRepository.save(match);
 	}
 
-
 	public List<Match> findAllMatches() {
 		return matchRepository.findAll();
 	}
-
 }

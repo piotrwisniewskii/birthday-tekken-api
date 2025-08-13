@@ -2,7 +2,6 @@ package com.example.birthday_tekken_api.controller;
 
 import com.example.birthday_tekken_api.model.Match;
 import com.example.birthday_tekken_api.model.TournamentState;
-import com.example.birthday_tekken_api.service.MatchRepository;
 import com.example.birthday_tekken_api.service.TournamentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +12,7 @@ import java.util.List;
 @RequestMapping("/api/tournament")
 @CrossOrigin(origins = "*")
 public class TournamentController {
+
     private final TournamentService tournamentService;
 
     public TournamentController(TournamentService tournamentService) {
@@ -47,4 +47,9 @@ public class TournamentController {
         return ResponseEntity.ok(tournamentService.findAllMatches());
     }
 
+    @GetMapping("/matches/history")
+    public ResponseEntity<List<Match>> getMatchHistory() {
+        // zwraca tylko mecze z aktualnego TournamentState (w pamięci)
+        return ResponseEntity.ok(tournamentService.getState().getHistory());
+    }
 }
