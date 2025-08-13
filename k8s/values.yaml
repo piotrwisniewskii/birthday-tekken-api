@@ -30,7 +30,7 @@ postgresql:
       memory: "1Gi"
     requests:
       cpu: "100m"
-      memory: "512Mi"
+      memory: "768Mi"
 
 istio:
   enabled: true

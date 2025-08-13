@@ -3,6 +3,7 @@ package com.example.birthday_tekken_api.model;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "\"match\"")
 public class Match {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
