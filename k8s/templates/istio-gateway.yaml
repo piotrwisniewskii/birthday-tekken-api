@@ -12,6 +12,5 @@ spec:
         number: {{ .Values.istio.gateway.port }}
         name: http
         protocol: HTTP
-      hosts:
-        - "*"
+      hosts: ["*"]
   {{- end }}

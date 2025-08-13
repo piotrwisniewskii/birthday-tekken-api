@@ -3,19 +3,25 @@ kind: Service
 metadata:
   name: postgres
   namespace: {{ .Values.namespace }}
+  labels:
+    app: postgres
 spec:
-  ports:
-    - port: 5432
   selector:
     app: postgres
+  ports:
+    - name: tcp
+      port: 5432
+      targetPort: 5432
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
   namespace: {{ .Values.namespace }}
+  labels:
+    app: postgres
 spec:
-  serviceName: "postgres"
+  serviceName: postgres
   replicas: 1
   selector:
     matchLabels:
@@ -27,19 +33,26 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: {{ .Values.postgresql.image }}
+          image: {{ .Values.postgresql.image | default "postgres:16-alpine" }}
           ports:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: {{ .Values.postgresql.database }}
+              value: {{ .Values.postgresql.database | default "birthdaydb" }}
             - name: POSTGRES_USER
-              value: {{ .Values.postgresql.username }}
+              value: {{ .Values.postgresql.username | default "postgres" }}
             - name: POSTGRES_PASSWORD
-              value: {{ .Values.postgresql.password }}
+              value: {{ .Values.postgresql.password | default "changeme" }}
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: {{ .Values.postgresql.resources.requests.cpu | default "100m" }}
+              memory: {{ .Values.postgresql.resources.requests.memory | default "512Mi" }}
+            limits:
+              cpu: {{ .Values.postgresql.resources.limits.cpu | default "500m" }}
+              memory: {{ .Values.postgresql.resources.limits.memory | default "1Gi" }}
   volumeClaimTemplates:
     - metadata:
         name: postgres-storage
@@ -47,4 +60,4 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: {{ .Values.postgresql.storage }}
+            storage: {{ .Values.postgresql.storage | default "2Gi" }}

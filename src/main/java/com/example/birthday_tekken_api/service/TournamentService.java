@@ -3,6 +3,8 @@ package com.example.birthday_tekken_api.service;
 import com.example.birthday_tekken_api.model.Match;
 import com.example.birthday_tekken_api.model.TournamentState;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.*;
 
 @Service
@@ -15,19 +17,17 @@ public class TournamentService {
 	}
 
 	public void start(List<String> players) {
-		// zrób wejście kuloodporne
 		List<String> cleaned = players == null ? List.of() :
 				players.stream()
 						.filter(Objects::nonNull)
-						.map(s -> s.replace("\r", ""))     // usuń CR z Windows
-						.map(String::trim)                 // przytnij spacje
-						.map(s -> s.replaceAll("\\|+$", "")) // zdejmij trailing |
-						.filter(s -> !s.isEmpty())         // usuń puste
-						.distinct()                        // usuń duplikaty
+						.map(s -> s.replace("\r",""))
+						.map(String::trim)
+						.filter(s -> !s.isEmpty())
+						.distinct()
 						.toList();
 
 		if (cleaned.size() < 2) {
-			throw new IllegalArgumentException("Podaj co najmniej 2 nazwiska graczy (po jednej linii).");
+			throw new IllegalArgumentException("Podaj co najmniej 2 graczy.");
 		}
 
 		state.getHistory().clear();
@@ -43,8 +43,6 @@ public class TournamentService {
 		state.setThirdPlaceMatch(null);
 	}
 
-
-
 	public List<Match> generateMatches() {
 		List<String> players = new ArrayList<>(state.getCurrentPlayers());
 		Collections.shuffle(players, new Random(System.nanoTime()));
@@ -56,39 +54,35 @@ public class TournamentService {
 			byeMatch.setWinner(bye);
 			matches.add(byeMatch);
 		}
-
 		for (int i = 0; i < players.size(); i += 2) {
 			matches.add(new Match(players.get(i), players.get(i + 1), "Round " + state.getRound()));
 		}
-
 		return matches;
 	}
 
+	@Transactional
 	public void submitResults(List<Match> results) {
 		List<String> nextRound = new ArrayList<>();
-		List<Match> submittedMatches = new ArrayList<>();
+		List<Match> toPersist = new ArrayList<>();
 
 		for (Match match : results) {
-			if (match.isByeMatch()) {
-				nextRound.add(match.getPlayer1());
-				state.getHistory().add(match);
-				matchRepository.save(match); // zapisujemy bye match
-				continue;
-			}
-			if (match.getWinner() == null ||
-					(!match.getPlayer1().equals(match.getWinner()) &&
-							!match.getPlayer2().equals(match.getWinner()))) {
+			// defensywnie: jeśli ktoś wysyła roundLabel zamiast round – nie przeszkadza to w zapisie
+			if (match.getWinner() == null && !match.isByeMatch()) {
 				throw new IllegalArgumentException("Invalid winner for match");
 			}
 
 			state.getHistory().add(match);
-			submittedMatches.add(match);
-			nextRound.add(match.getWinner());
+			toPersist.add(match);
+
+			if (match.isByeMatch()) {
+				nextRound.add(match.getPlayer1());
+			} else {
+				nextRound.add(match.getWinner());
+			}
 		}
 
-		// zapis wszystkich normalnych meczów tej rundy
-		if (!submittedMatches.isEmpty()) {
-			matchRepository.saveAll(submittedMatches);
+		if (!toPersist.isEmpty()) {
+			matchRepository.saveAll(toPersist);
 		}
 
 		state.setCurrentPlayers(nextRound);
@@ -97,11 +91,11 @@ public class TournamentService {
 			state.setFinished(true);
 			state.setWinner(nextRound.get(0));
 
-			// Ustal runner-up z finału
+			// runner-up z ostatniego „normalnego” meczu z tej rundy
 			Match finalMatch = null;
-			for (int i = submittedMatches.size() - 1; i >= 0; i--) {
-				if (!submittedMatches.get(i).isByeMatch()) {
-					finalMatch = submittedMatches.get(i);
+			for (int i = toPersist.size() - 1; i >= 0; i--) {
+				if (!toPersist.get(i).isByeMatch()) {
+					finalMatch = toPersist.get(i);
 					break;
 				}
 			}
@@ -114,7 +108,7 @@ public class TournamentService {
 				state.setRunnerUp(null);
 			}
 
-			// Sprawdź potrzebę meczu o 3 miejsce
+			// sprawdź, czy potrzebny mecz o 3. miejsce
 			if (state.getHistory().size() >= 3) {
 				List<Match> history = state.getHistory();
 				List<String> semifinalLosers = new ArrayList<>();
@@ -143,19 +137,18 @@ public class TournamentService {
 		}
 	}
 
+	@Transactional
 	public void submitThirdPlaceResult(String winner) {
 		if (!state.isThirdPlaceMatchRequired()) {
 			throw new IllegalStateException("Third place match is not available");
 		}
-		Match thirdPlaceMatch = state.getThirdPlaceMatch();
-		if (!thirdPlaceMatch.getPlayer1().equals(winner) &&
-				!thirdPlaceMatch.getPlayer2().equals(winner)) {
+		Match third = state.getThirdPlaceMatch();
+		if (!third.getPlayer1().equals(winner) && !third.getPlayer2().equals(winner)) {
 			throw new IllegalArgumentException("Invalid winner for third place match");
 		}
-
-		thirdPlaceMatch.setWinner(winner);
-		state.getHistory().add(thirdPlaceMatch);
-		matchRepository.save(thirdPlaceMatch); // zapis meczu o 3 miejsce
+		third.setWinner(winner);
+		state.getHistory().add(third);
+		matchRepository.save(third);
 		state.setThirdPlace(winner);
 		state.setThirdPlaceMatchRequired(false);
 	}
