@@ -164,4 +164,9 @@ public class TournamentService {
 	public List<Match> findAllMatches() {
 		return matchRepository.findAll();
 	}
+
+	@Transactional
+	public void deleteAllMatches() {
+		matchRepository.deleteAll();
+	}
 }

@@ -47,9 +47,10 @@ public class TournamentController {
         return ResponseEntity.ok(tournamentService.findAllMatches());
     }
 
-    @GetMapping("/matches/history")
-    public ResponseEntity<List<Match>> getMatchHistory() {
-        // zwraca tylko mecze z aktualnego TournamentState (w pamięci)
-        return ResponseEntity.ok(tournamentService.getState().getHistory());
+    @DeleteMapping("/matches")
+    public ResponseEntity<Void> deleteAllMatches() {
+        tournamentService.deleteAllMatches();
+        return ResponseEntity.noContent().build(); 
     }
+
 }
