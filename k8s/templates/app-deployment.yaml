@@ -31,7 +31,6 @@ spec:
       labels:
         app: birthday-api
       annotations:
-        sidecar.istio.io/rewriteAppHTTPProbers: "true"
     spec:
       initContainers:
         - name: wait-for-postgres

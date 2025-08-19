@@ -31,17 +31,13 @@ postgresql:
     requests:
       cpu: "100m"
       memory: "768Mi"
-
-istio:
+      
+ingress:
   enabled: true
-  hosts: ["*"]                 # catch-all w dev → działa localhost bez Host headera
-  gateway:
-    enabled: true
-    port: 80
-    name: birthday-gateway
-  virtualService:
-    enabled: true
-  destinationRule:
-    enabled: true
+  className: nginx
+  host: ""
+  path: /
+  pathType: Prefix
+  annotations: {}
 
 createNamespace: false
