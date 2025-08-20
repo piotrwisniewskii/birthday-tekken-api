@@ -3,7 +3,7 @@ namespace: birthday
 app:
   image:
     repository: piowisni/birthday-tekken-api
-    tag: latest            # i tak wstrzykniesz nowy w deploy.sh
+    tag: latest
     pullPolicy: Always
   resources:
     limits:

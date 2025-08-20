@@ -12,7 +12,6 @@ if ! command -v minikube >/dev/null 2>&1; then
   exit 1
 fi
 
-# 0) Upewnij się, że klaster działa (jeśli nie – uruchom)
 if ! minikube status >/dev/null 2>&1; then
   need_minikube_start=true
 fi
@@ -22,25 +21,20 @@ if $need_minikube_start; then
   minikube start --driver=docker --cpus=4 --memory=6g
 fi
 
-# 1) Włącz NGINX Ingress addon i poczekaj aż pod'y będą gotowe
 echo ">>> Włączam addon Ingress (NGINX)"
 minikube addons enable ingress >/dev/null
 
 echo ">>> Czekam na gotowość kontrolera Ingress..."
 kubectl -n ingress-nginx wait --for=condition=Available deploy/ingress-nginx-controller --timeout=180s
 
-# 2) Przygotuj namespace (bez istio-injection)
 kubectl create ns "${NAMESPACE}" 2>/dev/null || true
 kubectl label ns "${NAMESPACE}" istio-injection- --overwrite 2>/dev/null || true
 
-# 3) Wyznacz IP klastra i zbuduj host z sslip.io (bez /etc/hosts)
 MINIKUBE_IP="$(minikube ip)"
 HOST="birthday.${MINIKUBE_IP}.sslip.io"
 
 echo ">>> Użyję hosta Ingress: ${HOST}"
 
-# 4) Deploy chartu z Ingressem
-#    (w values.yaml nie musisz mieć hosta; tu nadpisujemy flaga --set)
 helm upgrade --install "${RELEASE_NAME}" "${CHART_PATH}" -n "${NAMESPACE}" \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
@@ -51,9 +45,10 @@ kubectl -n "${NAMESPACE}" rollout status deploy/birthday-api --timeout=180s
 
 echo
 echo "============================================================"
-echo "✅ Gotowe!"
 echo "URL:  http://${HOST}/"
 echo "Podgląd Ingress:"
 kubectl -n "${NAMESPACE}" get ingress
+
+echo "teraz, w przeglądarce wprowadź http://birthday.192.168.49.2.sslip.io/ i gotowe :)"
 echo "============================================================"
 
