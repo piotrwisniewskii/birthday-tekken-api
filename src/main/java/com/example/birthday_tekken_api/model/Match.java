@@ -1,6 +1,9 @@
 package com.example.birthday_tekken_api.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "\"match\"")
@@ -15,6 +18,11 @@ public class Match {
     private String round;
     private boolean byeMatch;
 
+    @CreationTimestamp
+    private OffsetDateTime matchTime;
+
+
+
     public Match() {}
 
     public Match(String player1, String player2, String round) {
@@ -22,6 +30,14 @@ public class Match {
         this.player2 = player2;
         this.round = round;
         this.byeMatch = player2 == null || player2.isEmpty();
+    }
+
+    public OffsetDateTime getMatchTime() {
+        return matchTime;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getPlayer1() {

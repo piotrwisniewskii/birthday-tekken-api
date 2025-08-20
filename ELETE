@@ -1,0 +1,7 @@
+HTTP/1.1 405 
+Date: Wed, 20 Aug 2025 19:09:32 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Allow: DELETE
+
