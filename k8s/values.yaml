@@ -7,11 +7,11 @@ app:
     pullPolicy: Always
   resources:
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "2"
+      memory: "2Gi"
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "1"
+      memory: "1Gi"
 
 service:
   type: ClusterIP

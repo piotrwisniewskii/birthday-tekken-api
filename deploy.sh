@@ -41,7 +41,7 @@ helm upgrade --install "${RELEASE_NAME}" "${CHART_PATH}" -n "${NAMESPACE}" \
   --set ingress.host="${HOST}"
 
 echo ">>> Czekam na gotowość aplikacji..."
-kubectl -n "${NAMESPACE}" rollout status deploy/birthday-api --timeout=180s
+kubectl -n "${NAMESPACE}" rollout status deploy/birthday-api --timeout=5m
 
 echo
 echo "============================================================"
