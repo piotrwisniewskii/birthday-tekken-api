@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Tournament System</title>
+    <title>Birthday Tekken</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -64,9 +64,11 @@
 <div id="setup-section">
     <h2>Start New Tournament</h2>
     <textarea id="players" rows="10" placeholder="Enter player names (one per line)"></textarea>
-    <button onclick="startTournament()">Start Tournament</button>
-</div>
 
+</div>
+<p>
+    <button onclick="startTournament()">Start Tournament</button>
+</p>
 <div id="tournament-section" style="display: none;">
     <div class="tournament-info">
         <h3>Round: <span id="current-round"></span></h3>
@@ -77,11 +79,14 @@
     <button onclick="submitResults()" id="submit-button">Submit Results</button>
 
     <div class="history-section" id="history-section" style="display:none;">
-        <h3>Turniej: Historia meczów</h3>
+        <h3>Tournament: match history</h3>
         <div id="history-content"></div>
     </div>
 </div>
 
+<a href="/api/tournament/matches/all">
+    <button>Pokaż wszystkie mecze</button>
+</a>
 <script>
     let currentState = null;
 
