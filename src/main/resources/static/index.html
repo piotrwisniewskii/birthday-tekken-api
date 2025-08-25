@@ -3,90 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <title>Birthday Tekken</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .match {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-        .player {
-            padding: 5px;
-            margin: 2px;
-        }
-        .winner {
-            background-color: #e6ffe6;
-        }
-        .tournament-info {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-        }
-        .bye-match {
-            color: #666;
-            font-style: italic;
-        }
-        .history-section {
-            margin-top: 30px;
-            background: #fafcff;
-            border-radius: 4px;
-            padding: 16px;
-            border: 1px solid #e7eef5;
-        }
-        .history-round {
-            margin-bottom: 15px;
-        }
-        .history-round-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .third-place-title {
-            font-style: italic;
-            margin-top: 18px;
-            font-weight: bold;
-        }
-        .history-match.winner span {
-            font-weight: bold;
-            color: #228822;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>Tournament System</h1>
+<main>
+    <h1>Tournament System</h1>
 
-<div id="setup-section">
-    <h2>Start New Tournament</h2>
-    <textarea id="players" rows="10" placeholder="Enter player names (one per line)"></textarea>
-
-</div>
-<p>
-    <button onclick="startTournament()">Start Tournament</button>
-</p>
-<div id="tournament-section" style="display: none;">
-    <div class="tournament-info">
-        <h3>Round: <span id="current-round"></span></h3>
-        <div id="tournament-status"></div>
+    <div id="setup-section">
+        <h2>Start New Tournament</h2>
+        <textarea id="players" rows="10" placeholder="Enter player names (one per line)"></textarea>
     </div>
 
-    <div id="matches"></div>
-    <button onclick="submitResults()" id="submit-button">Submit Results</button>
+    <p>
+        <button onclick="startTournament()">Start Tournament</button>
+    </p>
 
-    <div class="history-section" id="history-section" style="display:none;">
-        <h3>Tournament: match history</h3>
-        <div id="history-content"></div>
+    <div id="tournament-section" style="display: none;">
+        <div class="tournament-info">
+            <h3>Round: <span id="current-round"></span></h3>
+            <div id="tournament-status"></div>
+        </div>
+
+        <div id="matches"></div>
+        <button onclick="submitResults()" id="submit-button">Submit Results</button>
+
+        <div class="history-section" id="history-section" style="display:none;">
+            <h3>Tournament: match history</h3>
+            <div id="history-content"></div>
+        </div>
     </div>
+</main>
+
+<!-- button na dole -->
+<div class="bottom-button">
+    <a href="/api/tournament/matches/all">
+        <button>Pokaż wszystkie mecze</button>
+    </a>
 </div>
 
-<a href="/api/tournament/matches/all">
-    <button>Pokaż wszystkie mecze</button>
-</a>
 <script>
     let currentState = null;
 
@@ -102,20 +56,19 @@
         }
 
         fetch('/api/tournament/start', {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify(players)
-})
-.then(async (res) => {
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.message || `HTTP ${res.status}`);
-  }
-  return res.json();
-})
-.then(state => { currentState = state; showTournament(); updateDisplay(); })
-.catch(err => { alert(err.message || 'Error starting tournament'); });
-
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(players)
+        })
+        .then(async (res) => {
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.message || `HTTP ${res.status}`);
+            }
+            return res.json();
+        })
+        .then(state => { currentState = state; showTournament(); updateDisplay(); })
+        .catch(err => { alert(err.message || 'Error starting tournament'); });
     }
 
     function showTournament() {
@@ -180,7 +133,6 @@
             matchesDiv.appendChild(matchDiv);
         });
 
-        // ------ Dodaj historię turnieju ---------
         renderHistory(currentState.history, currentState.thirdPlaceMatch, currentState.thirdPlace);
     }
 
@@ -212,26 +164,25 @@
                 headers: currentState.thirdPlaceMatchRequired ? {} : {'Content-Type': 'application/json'},
                 body: currentState.thirdPlaceMatchRequired ? null : JSON.stringify(body)
             })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(state => {
-                    currentState = state;
-                    updateDisplay();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error submitting results');
-                });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(state => {
+                currentState = state;
+                updateDisplay();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error submitting results');
+            });
         } catch (error) {
             alert(error.message);
         }
     }
 
-    // --- renderHistory ---
     function renderHistory(history, thirdPlaceMatch, thirdPlaceWinner) {
         const histSection = document.getElementById('history-section');
         const histContent = document.getElementById('history-content');
@@ -242,7 +193,6 @@
         histSection.style.display = 'block';
         histContent.innerHTML = '';
 
-        // Grupuj po rundzie (i po trzecim miejscu osobno)
         const rounds = {};
         let thirdPlaceHistory = null;
         history.forEach(match => {
@@ -257,7 +207,6 @@
         });
 
         Object.keys(rounds).sort((a, b) => {
-            // Sort "Round X" numerically
             return parseInt(a.replace(/\D/g,''), 10) - parseInt(b.replace(/\D/g,''), 10);
         }).forEach(roundName => {
             const roundDiv = document.createElement('div');
@@ -280,15 +229,14 @@
             histContent.appendChild(roundDiv);
         });
 
-        // Mecz o trzecie miejsce:
         if (thirdPlaceHistory) {
             const thirdDiv = document.createElement('div');
             thirdDiv.className = 'history-round';
             thirdDiv.innerHTML = `<div class="third-place-title">Mecz o 3. miejsce:</div>
-                    <div class="history-match${thirdPlaceHistory.winner ? ' winner' : ''}">
-                        ${thirdPlaceHistory.player1} vs ${thirdPlaceHistory.player2}
-                        ${thirdPlaceHistory.winner ? `— <span>Zwycięzca: ${thirdPlaceHistory.winner}</span>` : ''}
-                    </div>`;
+                <div class="history-match${thirdPlaceHistory.winner ? ' winner' : ''}">
+                    ${thirdPlaceHistory.player1} vs ${thirdPlaceHistory.player2}
+                    ${thirdPlaceHistory.winner ? `— <span>Zwycięzca: ${thirdPlaceHistory.winner}</span>` : ''}
+                </div>`;
             histContent.appendChild(thirdDiv);
         }
     }
