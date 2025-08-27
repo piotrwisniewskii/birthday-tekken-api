@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Wszystkie mecze</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .back-btn {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .back-btn a button {
+            background-color: #28a745; /* zielony */
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .back-btn a button:hover {
+            background-color: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+<h1>Lista wszystkich meczów</h1>
+
+<table id="matches-table">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Gracz 1</th>
+        <th>Gracz 2</th>
+        <th>Zwycięzca</th>
+        <th>Runda</th>
+        <th>Bye Match</th>
+        <th>Czas meczu</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- tutaj wstawiają się dane -->
+    </tbody>
+</table>
+
+<div class="back-btn">
+    <a href="/"><button>⬅ Powrót</button></a>
+</div>
+
+<script>
+    async function loadMatches() {
+        try {
+            const response = await fetch('/api/tournament/matches/all');
+            if (!response.ok) {
+                throw new Error("Błąd wczytywania danych");
+            }
+            const matches = await response.json();
+            const tbody = document.querySelector("#matches-table tbody");
+            tbody.innerHTML = "";
+
+            matches.forEach(match => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${match.id}</td>
+                    <td>${match.player1 || "-"}</td>
+                    <td>${match.player2 || "-"}</td>
+                    <td>${match.winner || "-"}</td>
+                    <td>${match.round || "-"}</td>
+                    <td>${match.byeMatch ? "✔" : ""}</td>
+                    <td>${match.matchTime ? new Date(match.matchTime).toLocaleString() : "-"}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (err) {
+            alert(err.message);
+        }
+    }
+
+    loadMatches();
+</script>
+</body>
+</html>
