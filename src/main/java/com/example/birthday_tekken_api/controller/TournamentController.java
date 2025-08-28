@@ -53,4 +53,11 @@ public class TournamentController {
         return ResponseEntity.noContent().build(); 
     }
 
+    @PostMapping("/matches/delete-all") // na potrzeby guzika w matches ( html nie obsługuje endpointa delete - w przyszłosci zmienić .html na thymeleaf"
+    public ResponseEntity<Void> deleteAllMatchesPost() {
+        tournamentService.deleteAllMatches();
+        return ResponseEntity.noContent().build();
+    }
+
+
 }

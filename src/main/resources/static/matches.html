@@ -74,6 +74,14 @@
     <a href="/"><button>⬅ Powrót</button></a>
 </div>
 
+<form action="/api/tournament/matches/delete-all" method="post"
+      onsubmit="return confirm('Na pewno usunąć WSZYSTKIE mecze? Tej operacji nie można cofnąć.');">
+    <button type="submit" class="danger-btn">
+        🗑 Usuń wszystkie mecze
+    </button>
+</form>
+
+
 <script>
     async function loadMatches() {
         try {
