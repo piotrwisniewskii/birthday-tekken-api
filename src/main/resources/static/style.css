@@ -89,20 +89,12 @@ main {
     background-color: #0056b3;
 }
 
-..danger-btn {
-     background-color: #dc3545; /* czerwony */
-     color: white;
-     border: none;
-     padding: 10px 20px;
-     border-radius: 8px;
-     font-size: 16px;
-     cursor: pointer;
-     margin-top: 20px;
- }
+.danger-btn {
+  background-color:#dc3545; color:#fff; border:0; padding:10px 20px;
+  border-radius:8px; cursor:pointer; margin-top:14px;
+}
+.danger-btn:hover { background-color:#b02a37; }
 
- .danger-btn:hover {
-     background-color: #b02a37; /* ciemniejszy czerwony */
- }
 
 button {
   padding: 8px 14px;
