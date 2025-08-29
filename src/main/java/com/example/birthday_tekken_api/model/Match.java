@@ -21,7 +21,7 @@ public class Match {
     @CreationTimestamp
     private OffsetDateTime matchTime;
 
-
+    private String tournamentName;
 
     public Match() {}
 
@@ -79,4 +79,8 @@ public class Match {
     public void setByeMatch(boolean byeMatch) {
         this.byeMatch = byeMatch;
     }
+
+    public String getTournamentName() { return tournamentName; }
+
+    public void setTournamentName(String tournamentName) { this.tournamentName = tournamentName; }
 }

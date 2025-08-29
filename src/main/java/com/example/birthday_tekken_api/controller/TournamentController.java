@@ -58,6 +58,6 @@ public class TournamentController {
         tournamentService.deleteAllMatches();
         return ResponseEntity.noContent().build();
     }
-
+z
 
 }

@@ -11,6 +11,10 @@
 
     <div id="setup-section">
         <h2>Start New Tournament</h2>
+
+        <!-- 👇 nowe pole na nazwę turnieju -->
+        <input type="text" id="tournamentName" placeholder="Enter tournament name" />
+
         <textarea id="players" rows="10" placeholder="Enter player names (one per line)"></textarea>
     </div>
 
@@ -20,6 +24,7 @@
 
     <div id="tournament-section" style="display: none;">
         <div class="tournament-info">
+            <h2 id="tournament-title">Tournament: <span id="tournament-name"></span></h2>
             <h3>Round: <span id="current-round"></span></h3>
             <div id="tournament-status"></div>
         </div>
@@ -34,7 +39,6 @@
     </div>
 </main>
 
-
 <div class="bottom-button">
     <a href="/matches.html">
         <button>Pokaż wszystkie mecze</button>
@@ -45,20 +49,27 @@
     let currentState = null;
 
     function startTournament() {
+        const tournamentName = document.getElementById('tournamentName').value.trim();
         const players = document.getElementById('players').value
             .split('\n')
             .map(p => p.trim())
             .filter(p => p.length > 0);
 
+        if (!tournamentName) {
+            alert('Please enter a tournament name');
+            return;
+        }
         if (players.length < 2) {
             alert('Please enter at least 2 players');
             return;
         }
 
+        const payload = { name: tournamentName, players };
+
         fetch('/api/tournament/start', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(players)
+            body: JSON.stringify(payload)
         })
         .then(async (res) => {
             if (!res.ok) {
@@ -67,7 +78,13 @@
             }
             return res.json();
         })
-        .then(state => { currentState = state; showTournament(); updateDisplay(); })
+        .then(state => {
+            currentState = state;
+            // jeśli backend nie odsyła nazwy, zachowaj lokalnie
+            currentState.tournamentName = currentState.tournamentName || tournamentName;
+            showTournament();
+            updateDisplay();
+        })
         .catch(err => { alert(err.message || 'Error starting tournament'); });
     }
 
@@ -79,7 +96,10 @@
     function updateDisplay() {
         if (!currentState) return;
 
+        document.getElementById('tournament-name').textContent =
+            currentState.tournamentName || currentState.name || '(unnamed)';
         document.getElementById('current-round').textContent = currentState.round;
+
         const matchesDiv = document.getElementById('matches');
         matchesDiv.innerHTML = '';
 
@@ -109,9 +129,7 @@
 
             if (match.byeMatch) {
                 matchDiv.className += ' bye-match';
-                matchDiv.innerHTML = `
-                    <div>${match.player1} advances to next round (bye)</div>
-                `;
+                matchDiv.innerHTML = `<div>${match.player1} advances to next round (bye)</div>`;
             } else {
                 matchDiv.innerHTML = `
                     <div class="match-players">
@@ -144,13 +162,13 @@
 
             const results = matches.map((match, index) => {
                 if (match.byeMatch) {
-                    return { ...match, winner: match.player1 };
+                    return { ...match, winner: match.player1, tournamentName: currentState.tournamentName };
                 }
                 const winner = document.querySelector(`input[name="match${index}"]:checked`)?.value;
                 if (!winner) {
                     throw new Error('Please select a winner for all matches');
                 }
-                return { ...match, winner };
+                return { ...match, winner, tournamentName: currentState.tournamentName };
             });
 
             const endpoint = currentState.thirdPlaceMatchRequired ?

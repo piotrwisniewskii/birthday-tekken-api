@@ -56,6 +56,7 @@
 <table id="matches-table">
     <thead>
     <tr>
+        <th>Turniej</th>
         <th>ID</th>
         <th>Gracz 1</th>
         <th>Gracz 2</th>
@@ -96,6 +97,7 @@
             matches.forEach(match => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
+                    <td>${match.tournamentName || "-"}</td>
                     <td>${match.id}</td>
                     <td>${match.player1 || "-"}</td>
                     <td>${match.player2 || "-"}</td>
