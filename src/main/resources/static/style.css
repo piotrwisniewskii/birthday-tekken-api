@@ -103,5 +103,19 @@ main {
  .danger-btn:hover {
      background-color: #b02a37; /* ciemniejszy czerwony */
  }
-z
+
+button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #888;
+  cursor: pointer;
+}
+button:hover { filter: brightness(0.95); }
+#tournamentName {
+  display: block;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  width: 260px;
+}
+
 

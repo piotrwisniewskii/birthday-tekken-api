@@ -7,10 +7,10 @@
 </head>
 <body>
 <main>
-    <h1>Tournament System</h1>
+    <h1>Urodzinowy Turniej Tekkena</h1>
 
     <div id="setup-section">
-        <h2>Start New Tournament</h2>
+        <h2>Nowy Turniej</h2>
 
         <!-- 👇 nowe pole na nazwę turnieju -->
         <input type="text" id="tournamentName" placeholder="Enter tournament name" />
@@ -19,7 +19,7 @@
     </div>
 
     <p>
-        <button onclick="startTournament()">Start Tournament</button>
+        <button onclick="startTournament()">i Leecimy kochani</button>
     </p>
 
     <div id="tournament-section" style="display: none;">
@@ -49,44 +49,42 @@
     let currentState = null;
 
     function startTournament() {
-        const tournamentName = document.getElementById('tournamentName').value.trim();
-        const players = document.getElementById('players').value
-            .split('\n')
-            .map(p => p.trim())
-            .filter(p => p.length > 0);
+    const tournamentName = document.getElementById('tournamentName').value.trim();
+    const players = document.getElementById('players').value
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
 
-        if (!tournamentName) {
-            alert('Please enter a tournament name');
-            return;
-        }
-        if (players.length < 2) {
-            alert('Please enter at least 2 players');
-            return;
-        }
-
-        const payload = { name: tournamentName, players };
-
-        fetch('/api/tournament/start', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        })
-        .then(async (res) => {
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.message || `HTTP ${res.status}`);
-            }
-            return res.json();
-        })
-        .then(state => {
-            currentState = state;
-            // jeśli backend nie odsyła nazwy, zachowaj lokalnie
-            currentState.tournamentName = currentState.tournamentName || tournamentName;
-            showTournament();
-            updateDisplay();
-        })
-        .catch(err => { alert(err.message || 'Error starting tournament'); });
+    if (!tournamentName) {
+        alert('Please enter a tournament name');
+        return;
     }
+    if (players.length < 2) {
+        alert('Please enter at least 2 players');
+        return;
+    }
+
+    // 👉 BACKEND oczekuje samej listy, więc wysyłamy tylko players:
+    fetch('/api/tournament/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(players)
+    })
+    .then(async (res) => {
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data.message || `HTTP ${res.status}`);
+        }
+        return res.json();
+    })
+    .then(state => {
+        currentState = state || {};
+        currentState.tournamentName = tournamentName;
+        showTournament();
+        updateDisplay();
+    })
+    .catch(err => { alert(err.message || 'Error starting tournament'); });
+}
 
     function showTournament() {
         document.getElementById('setup-section').style.display = 'none';
