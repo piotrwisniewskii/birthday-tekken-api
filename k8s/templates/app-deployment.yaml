@@ -1,79 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "birthday-tekken-chart.fullname" . }}
+  name: {{ include "birthday-tekken-api.name" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "birthday-tekken-chart.labels" . | nindent 4 }}
+    {{- include "birthday-tekken-api.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
+  replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
-      {{- include "birthday-tekken-chart.selectorLabels" . | nindent 6 }}
+      app: {{ include "birthday-tekken-api.name" . }}
   template:
     metadata:
       labels:
-        {{- include "birthday-tekken-chart.selectorLabels" . | nindent 8 }}
+        app: {{ include "birthday-tekken-api.name" . }}
+        {{- include "birthday-tekken-api.labels" . | nindent 8 }}
     spec:
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: {{ include "birthday-tekken-api.name" . }}
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy | default "IfNotPresent" }}
           ports:
             - name: http
-              containerPort: 8080
-              protocol: TCP
-          env:
-            # --- Postgres ---
-            - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://{{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}"
-            - name: SPRING_DATASOURCE_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgresql.existingSecret }}
-                  key: username
-            - name: SPRING_DATASOURCE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgresql.existingSecret }}
-                  key: password
-
-            # --- RabbitMQ ---
-            - name: RABBITMQ_HOST
-              value: rabbitmq
-            - name: RABBITMQ_PORT
-              value: "5672"
-            - name: RABBITMQ_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: username
-            - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: password
-            - name: RABBITMQ_VHOST
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: vhost
-
-          # >>> TU jest kluczowy fragment ze wcięciem:
-          {{- with .Values.resources }}
+              containerPort: {{ .Values.service.port | default 8080 }}
           resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-
+            {{- toYaml .Values.app.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-
       {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
