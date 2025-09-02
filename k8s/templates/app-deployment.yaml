@@ -1,85 +1,75 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: birthday-api
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: birthday-api
-spec:
-  type: "{{ .Values.service.type | default "ClusterIP" }}"
-  selector:
-    app: birthday-api
-  ports:
-    - name: http
-      port: {{ .Values.service.port | default 8080 }}
-      targetPort: 8080
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: birthday-api
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "birthday-tekken-api.fullname" . }}
   labels:
-    app: birthday-api
+    {{- include "birthday-tekken-api.labels" . | nindent 4 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: birthday-api
+      {{- include "birthday-tekken-api.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: birthday-api
-      annotations:
+        {{- include "birthday-tekken-api.selectorLabels" . | nindent 8 }}
     spec:
-      initContainers:
-        - name: wait-for-postgres
-          image: "{{ .Values.postgresql.image | default "postgres:16-alpine" }}"
-          command: ["sh","-c"]
-          args:
-            - >
-              until pg_isready -h postgres -p 5432 -U {{ .Values.postgresql.username | default "postgres" }};
-              do echo "waiting for postgres..."; sleep 2; done; echo "postgres is ready."
-          env:
-            - name: PGPASSWORD
-              value: "{{ .Values.postgresql.password | default "changeme" }}"
       containers:
-        - name: birthday-api
-          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag }}"
-          imagePullPolicy: "{{ .Values.app.image.pullPolicy | default "Always" }}"
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+              protocol: TCP
           env:
             - name: SPRING_DATASOURCE_URL
-              value: "jdbc:postgresql://postgres:5432/{{ .Values.postgresql.database | default "birthdaydb" }}"
+              value: "jdbc:postgresql://{{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}"
             - name: SPRING_DATASOURCE_USERNAME
-              value: "{{ .Values.postgresql.username | default "postgres" }}"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: username
             - name: SPRING_DATASOURCE_PASSWORD
-              value: "{{ .Values.postgresql.password | default "changeme" }}"
-          startupProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            failureThreshold: 120
-            periodSeconds: 2
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 20
-            periodSeconds: 10
-            failureThreshold: 6
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            failureThreshold: 6
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: password
+
+            # --- RabbitMQ ---
+            - name: RABBITMQ_HOST
+              value: rabbitmq
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: password
+            - name: RABBITMQ_VHOST
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: vhost
+
           resources:
-            requests:
-              cpu: "{{ .Values.app.resources.requests.cpu | default "100m" }}"
-              memory: "{{ .Values.app.resources.requests.memory | default "256Mi" }}"
-            limits:
-              cpu: "{{ .Values.app.resources.limits.cpu | default "500m" }}"
-              memory: "{{ .Values.app.resources.limits.memory | default "512Mi" }}"
+            {{- toYaml .Values.resources | nindent 12 }
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

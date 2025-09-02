@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-auth
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+stringData:
+  username: {{ .Values.rabbitmq.username | default "appuser" | quote }}
+  password: {{ .Values.rabbitmq.password | default "apppass" | quote }}
+  vhost:    {{ .Values.rabbitmq.vhost    | default "/"        | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: rabbitmq }
+  template:
+    metadata:
+      labels: { app: rabbitmq }
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5672   # AMQP
+            - containerPort: 15672  # Management UI
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: username } }
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: password } }
+            - name: RABBITMQ_DEFAULT_VHOST
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: vhost } }
+          readinessProbe:
+            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu:    {{ .Values.rabbitmq.resources.requests.cpu    | default "50m" | quote }}
+              memory: {{ .Values.rabbitmq.resources.requests.memory | default "128Mi" | quote }}
+            limits:
+              cpu:    {{ .Values.rabbitmq.resources.limits.cpu      | default "500m" | quote }}
+              memory: {{ .Values.rabbitmq.resources.limits.memory   | default "512Mi" | quote }}

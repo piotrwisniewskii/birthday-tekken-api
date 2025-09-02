@@ -40,4 +40,17 @@ ingress:
   pathType: Prefix
   annotations: {}
 
+rabbitmq:
+  username: appuser
+  password: apppass
+  vhost: "/"
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+
 createNamespace: false
