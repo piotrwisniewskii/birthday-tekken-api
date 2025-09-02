@@ -10,6 +10,26 @@ stringData:
   vhost:    {{ .Values.rabbitmq.vhost    | default "/"        | quote }}
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: {{ .Release.Namespace }}
+data:
+  # Oficjalna składnia rabbitmq.conf (ini-style bez sekcji). Więcej: https://www.rabbitmq.com/configure.html
+  rabbitmq.conf: |
+    # Bezpieczniejszy watermark pamięci (wartość względna od limitu kontenera)
+    vm_memory_high_watermark.relative = 0.6
+
+    # Minimalny wolny dysk (wartość absolutna)
+    disk_free_limit.absolute = 50MB
+
+    # (opcjonalnie) port panelu
+    management.tcp.port = 15672
+
+    # (opcjonalnie) wyłączenie "guest" tylko localhost – i tak używamy własnego usera
+    loopback_users.guest = false
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
@@ -22,10 +42,10 @@ spec:
   ports:
     - name: amqp
       port: 5672
-      targetPort: 5672
+      targetPort: amqp
     - name: management
       port: 15672
-      targetPort: 15672
+      targetPort: mgmt
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -37,37 +57,75 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels: { app: rabbitmq }
+    matchLabels:
+      app: rabbitmq
   template:
     metadata:
-      labels: { app: rabbitmq }
+      labels:
+        app: rabbitmq
     spec:
       containers:
         - name: rabbitmq
           image: rabbitmq:3.13-management
           imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5672   # AMQP
-            - containerPort: 15672  # Management UI
+
+          # Użytkownik/hasło/vhost – te ENV są OK (NIE są deprecated)
           env:
             - name: RABBITMQ_DEFAULT_USER
-              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: username } }
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: username
             - name: RABBITMQ_DEFAULT_PASS
-              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: password } }
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: password
             - name: RABBITMQ_DEFAULT_VHOST
-              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: vhost } }
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: vhost
+
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: mgmt
+              containerPort: 15672
+
+          # Proby – kube nie puści ruchu, dopóki broker nie odpowiada
           readinessProbe:
-            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
-            initialDelaySeconds: 10
+            exec:
+              command: ["rabbitmq-diagnostics","-q","ping"]
+            initialDelaySeconds: 15
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 24   # ~2 min na cold-start
           livenessProbe:
-            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
-            initialDelaySeconds: 20
+            exec:
+              command: ["rabbitmq-diagnostics","-q","ping"]
+            initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
           resources:
             requests:
-              cpu:    {{ .Values.rabbitmq.resources.requests.cpu    | default "50m" | quote }}
-              memory: {{ .Values.rabbitmq.resources.requests.memory | default "128Mi" | quote }}
+              cpu: "100m"
+              memory: "256Mi"
             limits:
-              cpu:    {{ .Values.rabbitmq.resources.limits.cpu      | default "500m" | quote }}
-              memory: {{ .Values.rabbitmq.resources.limits.memory   | default "512Mi" | quote }}
+              cpu: "1"
+              memory: "1Gi"
+
+          volumeMounts:
+            - name: rabbitmq-config
+              mountPath: /etc/rabbitmq/rabbitmq.conf
+              subPath: rabbitmq.conf
+
+      volumes:
+        - name: rabbitmq-config
+          configMap:
+            name: rabbitmq-config
+            items:
+              - key: rabbitmq.conf
+                path: rabbitmq.conf

@@ -20,11 +20,86 @@ spec:
         - name: {{ include "birthday-tekken-api.name" . }}
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.app.image.pullPolicy | default "IfNotPresent" }}
+
+          # port nazwany "http" – proby używają portu po nazwie
           ports:
             - name: http
               containerPort: {{ .Values.service.port | default 8080 }}
+
+          # ===== PROBY APLIKACJI (Spring Actuator) =====
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+            timeoutSeconds: 2
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+            successThreshold: 1
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          # ===== ENV: Postgres + RabbitMQ =====
+          env:
+            # --- Postgres ---
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres:5432/{{ .Values.postgresql.database }}"
+            - name: SPRING_DATASOURCE_USERNAME
+              {{- if .Values.postgresql.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: username
+              {{- else }}
+              value: "{{ .Values.postgresql.username }}"
+              {{- end }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              {{- if .Values.postgresql.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgresql.existingSecret }}
+                  key: password
+              {{- else }}
+              value: "{{ .Values.postgresql.password }}"
+              {{- end }}
+
+            # --- RabbitMQ (zgodne z application.properties) ---
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
+            - name: RABBITMQ_PORT
+              value: "5672"
+            - name: RABBITMQ_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: username
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: password
+            - name: RABBITMQ_VHOST
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-auth
+                  key: vhost
+
           resources:
             {{- toYaml .Values.app.resources | nindent 12 }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
