@@ -13,6 +13,7 @@ public class TournamentState {
     private String runnerUp;
     private String thirdPlace;
     private Match thirdPlaceMatch;
+    private String tournamentId;
     private boolean thirdPlaceMatchRequired = false;
 
     public List<String> getCurrentPlayers() {
@@ -98,4 +99,6 @@ public class TournamentState {
     public void setThirdPlaceMatchRequired(boolean thirdPlaceMatchRequired) {
         this.thirdPlaceMatchRequired = thirdPlaceMatchRequired;
     }
+    public String getTournamentId() { return tournamentId; }
+    public void setTournamentId(String tournamentId) { this.tournamentId = tournamentId; }
 }

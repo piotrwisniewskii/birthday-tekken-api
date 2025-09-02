@@ -1,5 +1,6 @@
 package com.example.birthday_tekken_api.service;
 
+import com.example.birthday_tekken_api.messaging.TournamentEventPublisher;
 import com.example.birthday_tekken_api.model.Match;
 import com.example.birthday_tekken_api.model.TournamentState;
 import org.springframework.stereotype.Service;
@@ -11,12 +12,17 @@ import java.util.*;
 public class TournamentService {
 	private final TournamentState state = new TournamentState();
 	private final MatchRepository matchRepository;
+    private final TournamentEventPublisher eventPublisher;
 
-	public TournamentService(MatchRepository matchRepository) {
-		this.matchRepository = matchRepository;
-	}
 
-	public void start(List<String> players) {
+    public TournamentService(MatchRepository matchRepository,
+                             TournamentEventPublisher eventPublisher) {
+        this.matchRepository = matchRepository;
+        this.eventPublisher = eventPublisher;
+    }
+
+
+    public void start(List<String> players) {
 		List<String> cleaned = players == null ? List.of() :
 				players.stream()
 						.filter(Objects::nonNull)
@@ -41,7 +47,19 @@ public class TournamentService {
 		state.setThirdPlace(null);
 		state.setThirdPlaceMatchRequired(false);
 		state.setThirdPlaceMatch(null);
-	}
+
+        // >>> PUBLISH: tournament started
+        if (state.getTournamentId() == null || state.getTournamentId().isBlank()) {
+            state.setTournamentId(java.util.UUID.randomUUID().toString());
+        }
+        eventPublisher.publish(
+                "started",
+                state.getTournamentId(),
+                state.getRound(),
+                state.getCurrentPlayers()
+        );
+
+    }
 
 	public List<Match> generateMatches() {
 		List<String> players = new ArrayList<>(state.getCurrentPlayers());
@@ -135,7 +153,19 @@ public class TournamentService {
 			List<Match> nextMatches = generateMatches();
 			state.setCurrentMatches(nextMatches);
 		}
-	}
+
+        // >>> PUBLISH: round closed or tournament finished
+        if (state.isFinished()) {
+            java.util.List<String> payload = new java.util.ArrayList<>();
+            if (state.getWinner() != null)   payload.add("winner:" + state.getWinner());
+            if (state.getRunnerUp() != null) payload.add("runnerUp:" + state.getRunnerUp());
+            if (state.getThirdPlace() != null) payload.add("third:" + state.getThirdPlace());
+            eventPublisher.publish("finished", state.getTournamentId(), state.getRound(), payload);
+        } else {
+            eventPublisher.publish("roundClosed", state.getTournamentId(), state.getRound(), state.getCurrentPlayers());
+        }
+
+    }
 
 	@Transactional
 	public void submitThirdPlaceResult(String winner) {
