@@ -16,12 +16,26 @@ spec:
         app: {{ include "birthday-tekken-api.name" . }}
         {{- include "birthday-tekken-api.labels" . | nindent 8 }}
     spec:
+      # Czekaj na RabbitMQ zanim kontener aplikacji wystartuje
+      initContainers:
+        - name: wait-for-rabbit
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for rabbitmq:5672...";
+              until nc -z rabbitmq 5672; do
+                echo "RabbitMQ not ready yet, sleeping 2s";
+                sleep 2;
+              done
+              echo "RabbitMQ is reachable."
       containers:
         - name: {{ include "birthday-tekken-api.name" . }}
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.app.image.pullPolicy | default "IfNotPresent" }}
 
-          # port nazwany "http" – proby używają portu po nazwie
+          # Nazwany port 'http' (używany przez proby i/lub Service)
           ports:
             - name: http
               containerPort: {{ .Values.service.port | default 8080 }}

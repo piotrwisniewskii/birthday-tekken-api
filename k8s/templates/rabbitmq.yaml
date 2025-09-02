@@ -15,18 +15,15 @@ metadata:
   name: rabbitmq-config
   namespace: {{ .Release.Namespace }}
 data:
-  # Oficjalna składnia rabbitmq.conf (ini-style bez sekcji). Więcej: https://www.rabbitmq.com/configure.html
   rabbitmq.conf: |
-    # Bezpieczniejszy watermark pamięci (wartość względna od limitu kontenera)
+    # Pamięć/dysk w konfiguracji (ENV są deprec.)
     vm_memory_high_watermark.relative = 0.6
-
-    # Minimalny wolny dysk (wartość absolutna)
     disk_free_limit.absolute = 50MB
 
-    # (opcjonalnie) port panelu
+    # Panel www
     management.tcp.port = 15672
 
-    # (opcjonalnie) wyłączenie "guest" tylko localhost – i tak używamy własnego usera
+    # (opcjonalnie) nie blokuj 'guest'
     loopback_users.guest = false
 ---
 apiVersion: v1
@@ -56,6 +53,11 @@ metadata:
     app: rabbitmq
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: rabbitmq
@@ -64,28 +66,20 @@ spec:
       labels:
         app: rabbitmq
     spec:
+      terminationGracePeriodSeconds: 30
       containers:
         - name: rabbitmq
           image: rabbitmq:3.13-management
           imagePullPolicy: IfNotPresent
 
-          # Użytkownik/hasło/vhost – te ENV są OK (NIE są deprecated)
+          # Użytkownik/hasło/vhost – te ENV są wspierane
           env:
             - name: RABBITMQ_DEFAULT_USER
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: username
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: username } }
             - name: RABBITMQ_DEFAULT_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: password
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: password } }
             - name: RABBITMQ_DEFAULT_VHOST
-              valueFrom:
-                secretKeyRef:
-                  name: rabbitmq-auth
-                  key: vhost
+              valueFrom: { secretKeyRef: { name: rabbitmq-auth, key: vhost } }
 
           ports:
             - name: amqp
@@ -93,17 +87,14 @@ spec:
             - name: mgmt
               containerPort: 15672
 
-          # Proby – kube nie puści ruchu, dopóki broker nie odpowiada
           readinessProbe:
-            exec:
-              command: ["rabbitmq-diagnostics","-q","ping"]
+            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
             initialDelaySeconds: 15
             periodSeconds: 5
             timeoutSeconds: 3
-            failureThreshold: 24   # ~2 min na cold-start
+            failureThreshold: 24
           livenessProbe:
-            exec:
-              command: ["rabbitmq-diagnostics","-q","ping"]
+            exec: { command: ["rabbitmq-diagnostics","-q","ping"] }
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 3
