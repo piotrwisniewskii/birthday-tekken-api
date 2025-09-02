@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "birthday-tekken-api.fullname" . }}
+  name: {{ include "birthday-tekken-chart.fullname" . }}
   labels:
-    {{- include "birthday-tekken-api.labels" . | nindent 4 }}
+    {{- include "birthday-tekken-chart.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "birthday-tekken-api.selectorLabels" . | nindent 6 }}
+      {{- include "birthday-tekken-chart.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "birthday-tekken-api.selectorLabels" . | nindent 8 }}
+        {{- include "birthday-tekken-chart.selectorLabels" . | nindent 8 }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
@@ -23,6 +23,7 @@ spec:
               containerPort: 8080
               protocol: TCP
           env:
+            # --- Postgres ---
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://{{ .Values.postgresql.host }}:{{ .Values.postgresql.port }}/{{ .Values.postgresql.database }}"
             - name: SPRING_DATASOURCE_USERNAME
@@ -57,8 +58,12 @@ spec:
                   name: rabbitmq-auth
                   key: vhost
 
+          # >>> TU jest kluczowy fragment ze wcięciem:
+          {{- with .Values.resources }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
