@@ -5,8 +5,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 type: Opaque
 stringData:
-  username: {{ .Values.rabbitmq.username | default "appuser" | quote }}
-  password: {{ .Values.rabbitmq.password | default "apppass" | quote }}
+  username: {{ .Values.rabbitmq.username | default "admin" | quote }}
+  password: {{ .Values.rabbitmq.password | default "admin" | quote }}
   vhost:    {{ .Values.rabbitmq.vhost    | default "/"        | quote }}
 ---
 apiVersion: v1
