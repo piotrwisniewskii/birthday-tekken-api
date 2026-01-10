@@ -16,14 +16,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   rabbitmq.conf: |
-    # Pamięć/dysk w konfiguracji (ENV są deprec.)
     vm_memory_high_watermark.relative = 0.6
     disk_free_limit.absolute = 50MB
 
-    # Panel www
     management.tcp.port = 15672
 
-    # (opcjonalnie) nie blokuj 'guest'
     loopback_users.guest = false
 ---
 apiVersion: v1

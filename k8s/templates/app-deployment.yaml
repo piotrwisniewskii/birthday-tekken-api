@@ -35,12 +35,10 @@ spec:
           image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.app.image.pullPolicy | default "IfNotPresent" }}
 
-          # Nazwany port 'http' (używany przez proby i/lub Service)
           ports:
             - name: http
               containerPort: {{ .Values.service.port | default 8080 }}
 
-          # ===== PROBY APLIKACJI (Spring Actuator) =====
           startupProbe:
             httpGet:
               path: /actuator/health
@@ -66,7 +64,6 @@ spec:
             timeoutSeconds: 2
             failureThreshold: 3
 
-          # ===== ENV: Postgres + RabbitMQ =====
           env:
             # --- Postgres ---
             - name: SPRING_DATASOURCE_URL
@@ -90,7 +87,6 @@ spec:
               value: "{{ .Values.postgresql.password }}"
               {{- end }}
 
-            # --- RabbitMQ (zgodne z application.properties) ---
             - name: RABBITMQ_HOST
               value: "rabbitmq"
             - name: RABBITMQ_PORT
