@@ -21,7 +21,7 @@ postgresql:
   enabled: true
   image: postgres:16-alpine
   username: postgres
-  password: changeme
+  password: tohasloniepowinnotubyc
   database: birthdaydb
   storage: 2Gi
   resources:
