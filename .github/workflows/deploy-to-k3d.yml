@@ -1,0 +1,100 @@
+name: Deploy to k3d (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g. commit sha or "latest")'
+        required: true
+        default: 'latest'
+      image_repo:
+        description: 'Full image repository (user/repo), optional. Defaults to DOCKERHUB_USERNAME/birthday-tekken-api'
+        required: false
+      postgres_password:
+        description: 'Postgres password for demo secret'
+        required: false
+        default: 'postgrespw'
+      rabbit_password:
+        description: 'RabbitMQ password for demo secret'
+        required: false
+        default: 'apppass'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k3d
+        uses: k3d-io/k3d-action@v4
+        with:
+          version: '5.5.0'
+
+      - name: Create k3d cluster
+        run: |
+          k3d cluster create demo-cluster --wait || k3d cluster create demo-cluster --wait
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: '1.27.4'
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.12.0'
+
+      - name: Pull and import Docker image into k3d
+        env:
+          IMAGE_REPO_INPUT: ${{ inputs.image_repo }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          IMAGE_REPO=${IMAGE_REPO_INPUT:-${DOCKERHUB_USERNAME}/birthday-tekken-api}
+          IMAGE="$IMAGE_REPO:$IMAGE_TAG"
+          echo "Pulling image $IMAGE"
+          docker pull "$IMAGE"
+          echo "Importing image into k3d cluster"
+          k3d image import --cluster demo-cluster "$IMAGE"
+
+      - name: Ensure namespace and create demo secrets
+        env:
+          NAMESPACE: birthday
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ inputs.postgres_password }}
+          RABBIT_USER: appuser
+          RABBIT_PASSWORD: ${{ inputs.rabbit_password }}
+        run: |
+          kubectl create ns "$NAMESPACE" || true
+          kubectl -n "$NAMESPACE" create secret generic postgresql-auth \
+            --from-literal=username="$POSTGRES_USER" \
+            --from-literal=password="$POSTGRES_PASSWORD" \
+            --from-literal=database=birthdaydb || true
+          kubectl -n "$NAMESPACE" create secret generic rabbitmq-auth \
+            --from-literal=username="$RABBIT_USER" \
+            --from-literal=password="$RABBIT_PASSWORD" \
+            --from-literal=vhost=/ || true
+
+      - name: Helm upgrade/install chart
+        env:
+          IMAGE_REPO_INPUT: ${{ inputs.image_repo }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          NAMESPACE: birthday
+        run: |
+          IMAGE_REPO=${IMAGE_REPO_INPUT:-${DOCKERHUB_USERNAME}/birthday-tekken-api}
+          helm upgrade --install birthday-tekken-api ./k8s -n "$NAMESPACE" \
+            --create-namespace --wait --timeout 5m \
+            --set app.image.repository="$IMAGE_REPO" \
+            --set app.image.tag="$IMAGE_TAG" \
+            --set app.image.pullPolicy=IfNotPresent \
+            --set postgresql.existingSecret=postgresql-auth
+
+      - name: Show deployed resources
+        env:
+          NAMESPACE: birthday
+        run: |
+          kubectl -n "$NAMESPACE" get all
+          kubectl -n "$NAMESPACE" get ingress || true
