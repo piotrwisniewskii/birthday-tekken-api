@@ -49,7 +49,8 @@ jobs:
           curl -LO "https://dl.k8s.io/${RELEASE}/bin/linux/${arch}/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/kubectl
-          kubectl version --client --short
+          # Newer kubectl releases may remove the --short flag; try a modern output first
+          kubectl version --client --output=yaml || kubectl version --client || true
 
       - name: Setup Helm
         uses: azure/setup-helm@v3
