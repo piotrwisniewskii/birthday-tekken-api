@@ -7,9 +7,6 @@ on:
         description: 'Image tag to deploy (e.g. commit sha or "latest")'
         required: true
         default: 'latest'
-      image_repo:
-        description: 'Full image repository (user/repo), optional. Defaults to DOCKERHUB_USERNAME/birthday-tekken-api'
-        required: false
       postgres_password:
         description: 'Postgres password for demo secret'
         required: false
@@ -27,10 +24,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install k3d
-        uses: k3d-io/k3d-action@v4
-        with:
-          version: '5.5.0'
+      - name: Install k3d (install script)
+        run: |
+          # install k3d on the runner using the official install script
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d --version
 
       - name: Create k3d cluster
         run: |
@@ -46,14 +44,21 @@ jobs:
         with:
           version: 'v3.12.0'
 
-      - name: Pull and import Docker image into k3d
+      - name: Docker login (optional) and import image into k3d
         env:
-          IMAGE_REPO_INPUT: ${{ inputs.image_repo }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           IMAGE_TAG: ${{ inputs.image_tag }}
         run: |
-          IMAGE_REPO=${IMAGE_REPO_INPUT:-${DOCKERHUB_USERNAME}/birthday-tekken-api}
+          # Use the image from the build-and-push workflow: ${DOCKERHUB_USERNAME}/birthday-tekken-api:${IMAGE_TAG}
+          IMAGE_REPO="${DOCKERHUB_USERNAME}/birthday-tekken-api"
           IMAGE="$IMAGE_REPO:$IMAGE_TAG"
+          if [ -n "${DOCKERHUB_USERNAME:-}" ] && [ -n "${DOCKERHUB_TOKEN:-}" ]; then
+            echo "Logging into Docker Hub"
+            echo "${DOCKERHUB_TOKEN}" | docker login --username "${DOCKERHUB_USERNAME}" --password-stdin
+          else
+            echo "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN not set — attempting anonymous pull"
+          fi
           echo "Pulling image $IMAGE"
           docker pull "$IMAGE"
           echo "Importing image into k3d cluster"
@@ -79,12 +84,11 @@ jobs:
 
       - name: Helm upgrade/install chart
         env:
-          IMAGE_REPO_INPUT: ${{ inputs.image_repo }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           IMAGE_TAG: ${{ inputs.image_tag }}
           NAMESPACE: birthday
         run: |
-          IMAGE_REPO=${IMAGE_REPO_INPUT:-${DOCKERHUB_USERNAME}/birthday-tekken-api}
+          IMAGE_REPO="${DOCKERHUB_USERNAME}/birthday-tekken-api"
           helm upgrade --install birthday-tekken-api ./k8s -n "$NAMESPACE" \
             --create-namespace --wait --timeout 5m \
             --set app.image.repository="$IMAGE_REPO" \
