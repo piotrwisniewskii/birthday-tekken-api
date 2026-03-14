@@ -90,10 +90,11 @@ jobs:
             --from-literal=username="$POSTGRES_USER" \
             --from-literal=password="$POSTGRES_PASSWORD" \
             --from-literal=database=birthdaydb || true
-          kubectl -n "$NAMESPACE" create secret generic rabbitmq-auth \
-            --from-literal=username="$RABBIT_USER" \
-            --from-literal=password="$RABBIT_PASSWORD" \
-            --from-literal=vhost=/ || true
+          # NOTE: rabbitmq-auth is created by the Helm chart (it is managed by the chart)
+          # Do not create `rabbitmq-auth` here — creating it manually causes a conflict
+          # because Helm cannot adopt existing resources that lack Helm ownership metadata.
+          # If you need to provide custom RabbitMQ credentials, set them via Helm values
+          # (e.g. --set rabbitmq.username=... --set rabbitmq.password=...) instead.
 
       - name: Helm upgrade/install chart
         env:
