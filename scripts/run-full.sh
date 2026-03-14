@@ -21,13 +21,53 @@ for cmd in minikube kubectl helm docker git mvn; do
   fi
 done
 
-echo ">>> Starting minikube (if not running)"
-if ! minikube status >/dev/null 2>&1; then
-  minikube start --driver=docker --cpus=3 --memory=4g
-fi
+echo ">>> Ensure local Minikube and kubectl context"
+if command -v minikube >/dev/null 2>&1; then
+  # If Minikube is installed, make sure it's running and switch kubectl context to it
+  if minikube status >/dev/null 2>&1; then
+    echo ">>> Minikube appears to be running. Switching kubectl context to 'minikube' (if not already)."
+    kubectl config use-context minikube >/dev/null 2>&1 || true
+  else
+    echo ">>> Minikube not running — starting Minikube"
+    # Try to start; if start fails due to resource-change on existing profile,
+    # delete and recreate the cluster automatically.
+    START_OUTFILE="/tmp/minikube_start.out"
+    if minikube start --driver=docker --cpus=3 --memory=4g >"${START_OUTFILE}" 2>&1; then
+      kubectl config use-context minikube >/dev/null 2>&1 || true
+    else
+      start_err=$(cat "${START_OUTFILE}" 2>/dev/null || true)
+      echo ">>> minikube start failed (see message)."
+      # Detect common message about not being able to change resources
+      if printf '%s' "$start_err" | grep -qiE "cannot change the (memory|cpus) for an existing|minikube.*already exists|must first delete the cluster"; then
+        echo ">>> Detected existing Minikube profile with different resources. Deleting and recreating cluster..."
+        minikube delete || true
+        minikube start --driver=docker --cpus=4 --memory=6144 --wait=all
+        kubectl config use-context minikube >/dev/null 2>&1 || true
+      else
+        echo ">>> minikube start failed for an unexpected reason. Showing last 200 chars of output:"
+        echo "${start_err: -200}"
+        exit 1
+      fi
+    fi
+  fi
 
-echo ">>> Enabling ingress"
-minikube addons enable ingress >/dev/null || true
+  echo ">>> Enabling ingress addon (with retries)"
+  # Retry enabling ingress a few times because the API server can be slow to become ready
+  MAX_RETRIES=5
+  SLEEP_SECONDS=10
+  attempt=1
+  until minikube addons enable ingress >/dev/null 2>&1; do
+    if [ "$attempt" -ge "$MAX_RETRIES" ]; then
+      echo ">>> Warning: failed to enable ingress after ${MAX_RETRIES} attempts. Continuing — you can try 'minikube addons enable ingress' later."
+      break
+    fi
+    echo ">>> Ingress enable attempt ${attempt} failed — retrying in ${SLEEP_SECONDS}s..."
+    attempt=$((attempt+1))
+    sleep ${SLEEP_SECONDS}
+  done
+else
+  echo ">>> Minikube not installed. The script will proceed using the current kubectl context."
+fi
 
 echo ">>> Building project (maven)"
 mvn -B -DskipTests clean package
@@ -43,6 +83,22 @@ else
   eval "$(minikube docker-env)"
   docker build -t "${IMAGE}" .
 fi
+
+echo ">>> Validating kubectl can reach the cluster"
+# Wait for the API server to be ready (kubectl cluster-info may briefly fail)
+WAIT_ATTEMPTS=12
+WAIT_SLEEP=5
+attempt=1
+until kubectl cluster-info >/dev/null 2>&1; do
+  if [ "$attempt" -ge "$WAIT_ATTEMPTS" ]; then
+    echo "Error: kubectl cannot reach the configured cluster (current-context: $(kubectl config current-context 2>/dev/null || echo none))."
+    echo "Give minikube more time or inspect 'minikube logs'."
+    exit 1
+  fi
+  echo ">>> Waiting for kubectl to be able to contact the cluster (attempt ${attempt}/${WAIT_ATTEMPTS})..."
+  attempt=$((attempt+1))
+  sleep ${WAIT_SLEEP}
+done
 
 echo ">>> Creating namespace: ${NAMESPACE}"
 kubectl create ns "${NAMESPACE}" 2>/dev/null || true
@@ -65,11 +121,34 @@ kubectl -n "${NAMESPACE}" get secret postgresql-auth >/dev/null 2>&1 || \
     --from-literal=password="${POSTGRES_PASSWORD:-postgrespw}" \
     --from-literal=database="${POSTGRES_DB:-birthdaydb}"
 
-kubectl -n "${NAMESPACE}" get secret rabbitmq-auth >/dev/null 2>&1 || \
-  kubectl -n "${NAMESPACE}" create secret generic rabbitmq-auth \
-    --from-literal=username="${RABBIT_USER:-appuser}" \
-    --from-literal=password="${RABBIT_PASSWORD:-apppass}" \
-    --from-literal=vhost="${RABBIT_VHOST:-/}"
+# NOTE: RabbitMQ secret (`rabbitmq-auth`) is created by the Helm chart
+# (so Helm becomes the owner). Creating it beforehand without Helm
+# ownership metadata will cause Helm to fail the install. We therefore
+# do NOT create `rabbitmq-auth` here. If you already created it manually
+# and Helm fails, delete it so Helm can create it:
+#   kubectl -n ${NAMESPACE} delete secret rabbitmq-auth
+
+if kubectl -n "${NAMESPACE}" get secret rabbitmq-auth >/dev/null 2>&1; then
+  echo ">>> Warning: secret 'rabbitmq-auth' already exists in namespace ${NAMESPACE}."
+  echo ">>> If Helm install fails with ownership/annotation errors, run: kubectl -n ${NAMESPACE} delete secret rabbitmq-auth"
+fi
+
+# If a user-created `rabbitmq-auth` exists but is NOT owned by Helm, back it up and remove it
+if kubectl -n "${NAMESPACE}" get secret rabbitmq-auth >/dev/null 2>&1; then
+  # Check for Helm ownership metadata
+  managed_by=$(kubectl -n "${NAMESPACE}" get secret rabbitmq-auth -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || true)
+  release_name=$(kubectl -n "${NAMESPACE}" get secret rabbitmq-auth -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}' 2>/dev/null || true)
+  release_ns=$(kubectl -n "${NAMESPACE}" get secret rabbitmq-auth -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-namespace}' 2>/dev/null || true)
+  if [ -z "$managed_by" ] || [ "$managed_by" != "Helm" ] || [ -z "$release_name" ] || [ -z "$release_ns" ]; then
+    echo ">>> Existing 'rabbitmq-auth' secret is not Helm-managed. Backing up and removing so Helm can create it."
+    BACKUP_PATH="/tmp/rabbitmq-auth-backup-$(date +%s).yaml"
+    kubectl -n "${NAMESPACE}" get secret rabbitmq-auth -o yaml > "$BACKUP_PATH" || true
+    echo ">>> Backed up to $BACKUP_PATH"
+    kubectl -n "${NAMESPACE}" delete secret rabbitmq-auth || true
+  else
+    echo ">>> 'rabbitmq-auth' already managed by Helm (release=${release_name}, namespace=${release_ns}), leaving it." 
+  fi
+fi
 
 echo ">>> Deploying Helm chart"
 helm upgrade --install birthday-tekken-api ./k8s -n "${NAMESPACE}" \
