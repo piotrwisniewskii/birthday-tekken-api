@@ -34,10 +34,22 @@ jobs:
         run: |
           k3d cluster create demo-cluster --wait || k3d cluster create demo-cluster --wait
 
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: '1.27.4'
+      - name: Install kubectl (stable)
+        # azure/setup-kubectl sometimes requests a specific version that may not be available
+        # Install the stable kubectl binary for the runner architecture directly.
+        run: |
+          set -euo pipefail
+          arch=amd64
+          if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
+            arch=arm64
+          fi
+          # Get the stable release tag (e.g. v1.27.6)
+          RELEASE=$(curl -L -s https://dl.k8s.io/release/stable.txt)
+          echo "Installing kubectl ${RELEASE} for architecture ${arch}"
+          curl -LO "https://dl.k8s.io/${RELEASE}/bin/linux/${arch}/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          kubectl version --client --short
 
       - name: Setup Helm
         uses: azure/setup-helm@v3
