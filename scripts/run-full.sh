@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple local dev runner for the project.
-# Usage: ./scripts/run-local.sh [image-tag]
+# Full local runner for the project (build + deploy).
+# Usage: ./scripts/run-full.sh [image-tag]
 # If image-tag is omitted, uses git short SHA or 'local'.
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,8 +13,8 @@ TAG="${1:-$(git rev-parse --short HEAD 2>/dev/null || echo local)}"
 IMAGE="${IMAGE_REPO}/birthday-tekken-api:${TAG}"
 NAMESPACE="birthday"
 
-echo ">>> Requirements: minikube, kubectl, helm, docker"
-for cmd in minikube kubectl helm docker git; do
+echo ">>> Requirements: minikube, kubectl, helm, docker, git, mvn"
+for cmd in minikube kubectl helm docker git mvn; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Required command not found: $cmd" >&2
     exit 1
@@ -42,7 +42,6 @@ else
   echo "Fallback: using minikube docker-env"
   eval "$(minikube docker-env)"
   docker build -t "${IMAGE}" .
-  # no need to unset env; user session continues
 fi
 
 echo ">>> Creating namespace: ${NAMESPACE}"

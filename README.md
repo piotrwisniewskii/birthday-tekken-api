@@ -57,7 +57,7 @@ mvn -B -DskipTests clean package
 docker build -t <docker_user>/birthday-tekken-api:<tag> .
 docker push <docker_user>/birthday-tekken-api:<tag>
 helm package k8s
-# opcjonalnie: załaduj chart.tgz do GitHub Release (asset)
+./scripts/run-full.sh
 ```
 
 ## Audyt plików (co zostawić, co można usunąć)
@@ -141,27 +141,24 @@ There are two recommended pipelines in this repository:
 	- `DOCKERHUB_USERNAME` — your Docker Hub user/org
 	- `DOCKERHUB_TOKEN` — a Docker Hub access token (or password)
 
-2) Deploy to Minikube (manual / self-hosted)
+2) Manual deploy options
 
-- Location: `.github/workflows/deploy-to-minikube.yml`
-- This workflow is intended to run on a self-hosted runner that already has `minikube`, `kubectl` and `helm` installed.
-- It is manually triggered (workflow_dispatch) and accepts an `image_tag` input.
-- The workflow executes `scripts/deploy-minikube.sh <image:tag>` which:
-	- pulls the image from the registry
-	- loads it into Minikube (`minikube image load`)
-	- runs `helm upgrade --install` with the specified image tag
+- Hosted (recommended for demos): `.github/workflows/deploy-to-k3d.yml` — a manual (workflow_dispatch) job that runs on GitHub-hosted runners, creates a k3d cluster, imports a specified image and runs the Helm chart. Use this for a reproducible demo without a self-hosted runner.
+
+- Local (developer): use `./scripts/run-local-image.sh <image:tag>` to pull an image, load it into your local Minikube and deploy the Helm chart. This is the simple local path when you already pushed an image to a registry.
 
 Local usage (dev):
 
-You can also run the deploy script locally on a machine with `minikube` and `helm`:
+You can build and push an image, then deploy it locally:
 
 ```bash
-# build and push image locally (or use the workflow)
+# build and push image locally (or use the build-and-push workflow)
+mvn -B -DskipTests clean package
 docker build -t <docker_user>/birthday-tekken-api:mytag .
 docker push <docker_user>/birthday-tekken-api:mytag
 
 # then load and deploy to your local minikube
-./scripts/deploy-minikube.sh <docker_user>/birthday-tekken-api:mytag
+./scripts/run-local-image.sh <docker_user>/birthday-tekken-api:mytag
 ```
 
 Notes
