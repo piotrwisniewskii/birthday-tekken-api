@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420">
+  <style>
+    .box { fill:#ffffff; stroke:#2b6cb0; stroke-width:2px; rx:8; }
+    .title { font: bold 16px sans-serif; fill:#2b6cb0 }
+    .label { font: 13px sans-serif; fill:#1a202c }
+    .arrow { stroke:#2d3748; stroke-width:2; fill:none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2d3748" />
+    </marker>
+  </defs>
+
+  <!-- Left: Developer workstation -->
+  <rect x="20" y="40" width="200" height="120" class="box" />
+  <text x="30" y="70" class="title">Developer</text>
+  <text x="30" y="95" class="label">mvn, docker, helm, minikube</text>
+  <text x="30" y="115" class="label">run-local.sh / GitHub Actions</text>
+
+  <!-- Center: CI / Registry -->
+  <rect x="340" y="20" width="220" height="160" class="box" />
+  <text x="360" y="50" class="title">CI / Registry</text>
+  <text x="360" y="80" class="label">GitHub Actions</text>
+  <text x="360" y="100" class="label">Docker Hub / GHCR</text>
+  <text x="360" y="120" class="label">Publish image & chart.tgz</text>
+
+  <!-- Right: Minikube cluster -->
+  <rect x="620" y="40" width="260" height="320" class="box" />
+  <text x="640" y="70" class="title">Minikube / Kubernetes</text>
+  <text x="640" y="98" class="label">Ingress (nginx)</text>
+  <text x="640" y="118" class="label">Deployment: birthday-api</text>
+  <text x="640" y="138" class="label">Postgres (StatefulSet)</text>
+  <text x="640" y="158" class="label">RabbitMQ</text>
+  <text x="640" y="178" class="label">Helm chart values + Secrets</text>
+
+  <!-- Arrows -->
+  <path d="M220 100 L340 100" class="arrow" />
+  <path d="M560 100 L620 100" class="arrow" />
+
+  <!-- Notes -->
+  <text x="20" y="200" class="label">Quick demo: run-local.sh builds image → loads to minikube → helm upgrade</text>
+  <text x="20" y="220" class="label">CI flow: build & push image → release chart.tgz → optional auto-deploy</text>
+</svg>
