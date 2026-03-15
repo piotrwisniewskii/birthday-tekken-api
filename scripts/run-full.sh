@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Full local runner for the project (build + deploy).
+# Full local runner for the project (build + deploy). 
 # Usage: ./scripts/run-full.sh [image-tag]
 # If image-tag is omitted, uses git short SHA or 'local'.
 
