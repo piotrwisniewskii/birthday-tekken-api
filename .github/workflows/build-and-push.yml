@@ -4,9 +4,51 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
+  verify-dependency-scan-recency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate recent successful dependency scan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const workflow_id = 'dependency-scan.yml';
+            const maxAgeDays = 30;
+            const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              owner,
+              repo,
+              workflow_id,
+              per_page: 100,
+              event: 'workflow_dispatch'
+            });
+
+            const acceptable = runs.find((run) => {
+              if (run.status !== 'completed') return false;
+              if (run.conclusion !== 'success') return false;
+              if (!run.created_at) return false;
+              return new Date(run.created_at).getTime() >= cutoff;
+            });
+
+            if (!acceptable) {
+              core.setFailed(
+                'Brak udanego, manualnie uruchomionego dependency scan (workflow_dispatch) z ostatnich 30 dni. ' +
+                'Uruchom workflow "Dependency Vulnerability Scan" i sproboj ponownie.'
+              );
+            } else {
+              core.info(`Dependency scan gate passed with run #${acceptable.run_number} from ${acceptable.created_at}.`);
+            }
+
   test-and-scan:
     runs-on: ubuntu-latest
+    needs: verify-dependency-scan-recency
     services:
       postgres:
         image: postgres:16
@@ -56,18 +98,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Run tests and dependency scan
-        run: ./mvnw -B clean verify
-
-      - name: Upload dependency-check report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dependency-check-report
-          path: |
-            target/dependency-check-report.html
-            target/dependency-check-report.json
-          if-no-files-found: warn
+      - name: Run tests
+        run: ./mvnw -B -Ddependency-check.skip=true clean verify
 
   build-and-push:
     runs-on: ubuntu-latest
