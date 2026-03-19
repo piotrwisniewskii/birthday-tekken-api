@@ -134,6 +134,40 @@ jobs:
             target/trivy-report.txt
           if-no-files-found: warn
 
+      - name: Summarize blocked push due to missing report
+        if: always() && steps.dependency_scan.outputs.report_generated != 'true'
+        run: |
+          {
+            echo "## Docker Push Decision"
+            echo
+            echo "- Status: blocked"
+            echo "- Reason: dependency scan report was not generated"
+            echo "- Docker Hub push will not run"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarize blocked push due to vulnerabilities
+        if: always() && steps.dependency_scan.outputs.report_generated == 'true' && steps.dependency_scan.outputs.scan_exit_code != '0'
+        run: |
+          {
+            echo "## Docker Push Decision"
+            echo
+            echo "- Status: blocked"
+            echo "- Reason: Trivy found HIGH or CRITICAL vulnerabilities"
+            echo "- Artifact: dependency-scan-report"
+            echo "- Docker Hub push will not run"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarize allowed push
+        if: always() && steps.dependency_scan.outputs.report_generated == 'true' && steps.dependency_scan.outputs.scan_exit_code == '0'
+        run: |
+          {
+            echo "## Docker Push Decision"
+            echo
+            echo "- Status: allowed"
+            echo "- Reason: tests passed and Trivy found no HIGH or CRITICAL vulnerabilities"
+            echo "- Next step: build-and-push job will push the Docker image"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Fail if report was not generated
         if: always() && steps.dependency_scan.outputs.report_generated != 'true'
         run: |
@@ -169,3 +203,13 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/birthday-tekken-api:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/birthday-tekken-api:latest
+
+      - name: Summarize Docker push
+        run: |
+          {
+            echo "## Docker Push Result"
+            echo
+            echo "- Status: pushed"
+            echo "- Image: ${{ secrets.DOCKERHUB_USERNAME }}/birthday-tekken-api:${{ github.sha }}"
+            echo "- Image: ${{ secrets.DOCKERHUB_USERNAME }}/birthday-tekken-api:latest"
+          } >> "$GITHUB_STEP_SUMMARY"
