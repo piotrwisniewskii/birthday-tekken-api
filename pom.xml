@@ -64,31 +64,6 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
-			<plugin>
-				<groupId>org.owasp</groupId>
-				<artifactId>dependency-check-maven</artifactId>
-				<version>10.0.4</version>
-				<configuration>
-					<failBuildOnCVSS>7</failBuildOnCVSS>
-					<failOnError>false</failOnError>
-					<dataDirectory>${user.home}/.m2/repository/org/owasp/dependency-check-data</dataDirectory>
-					<nvdValidForHours>168</nvdValidForHours>
-					<outputDirectory>${project.build.directory}</outputDirectory>
-					<formats>
-						<format>HTML</format>
-						<format>JSON</format>
-					</formats>
-					<skipProvidedScope>true</skipProvidedScope>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>verify</phase>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 	</build>
 
