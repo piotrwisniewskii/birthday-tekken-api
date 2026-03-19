@@ -2,48 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Birthday Tekken</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<main>
-    <h1>Urodzinowy Turniej Tekkena</h1>
+<body class="page-home">
+<main class="page-shell">
+    <section class="hero-panel">
+        <div class="hero-copy">
+            <p class="eyebrow">Birthday Tekken Night</p>
+            <h1>Urodzinowy Turniej Tekkena</h1>
+            <p class="hero-text">
+                Szybki generator drabinki, zapis meczow i historia rund w jednym miejscu.
+                Wrzucasz nazwe turnieju, liste zawodnikow i odpalasz cala rozgrywke.
+            </p>
+        </div>
+        <div class="hero-badge-stack">
+            <div class="stat-chip">
+                <span class="stat-chip-label">Tryb</span>
+                <strong>Single Elimination</strong>
+            </div>
+            <div class="stat-chip">
+                <span class="stat-chip-label">Backend</span>
+                <strong>Spring Boot + RabbitMQ</strong>
+            </div>
+        </div>
+    </section>
 
-    <div id="setup-section">
-        <h2>Nowy Turniej</h2>
+    <section class="panel-card setup-card" id="setup-section">
+        <div class="section-heading">
+            <p class="section-kicker">Start</p>
+            <h2>Nowy Turniej</h2>
+        </div>
 
-        <!-- 👇 nowe pole na nazwę turnieju -->
-        <input type="text" id="tournamentName" placeholder="Enter tournament name" />
+        <label class="field-label" for="tournamentName">Nazwa turnieju</label>
+        <input type="text" id="tournamentName" placeholder="Np. Tekken Birthday Bash" />
 
-        <textarea id="players" rows="10" placeholder="Enter player names (one per line)"></textarea>
-    </div>
+        <label class="field-label" for="players">Lista graczy</label>
+        <textarea id="players" rows="10" placeholder="Wpisz po jednym graczu w kazdej linii"></textarea>
 
-    <p>
-        <button onclick="startTournament()">i Leecimy kochani</button>
-    </p>
+        <div class="cta-row">
+            <button class="primary-button" onclick="startTournament()">Start turnieju</button>
+            <a class="ghost-link" href="/matches.html">Zobacz archiwum meczow</a>
+        </div>
+    </section>
 
-    <div id="tournament-section" style="display: none;">
-        <div class="tournament-info">
-            <h2 id="tournament-title">Tournament: <span id="tournament-name"></span></h2>
-            <h3>Round: <span id="current-round"></span></h3>
+    <section class="tournament-layout" id="tournament-section" style="display: none;">
+        <div class="panel-card tournament-info">
+            <div class="section-heading compact-heading">
+                <p class="section-kicker">Live bracket</p>
+                <h2 id="tournament-title">Tournament: <span id="tournament-name"></span></h2>
+            </div>
+            <div class="round-pill">Runda <span id="current-round"></span></div>
             <div id="tournament-status"></div>
         </div>
 
-        <div id="matches"></div>
-        <button onclick="submitResults()" id="submit-button">Submit Results</button>
+        <div class="panel-card matches-card">
+            <div class="section-heading compact-heading">
+                <p class="section-kicker">Aktualna kolejka</p>
+                <h3>Wybierz zwyciezcow</h3>
+            </div>
+            <div id="matches"></div>
+            <button class="primary-button submit-button" onclick="submitResults()" id="submit-button">Zapisz wyniki</button>
+        </div>
 
-        <div class="history-section" id="history-section" style="display:none;">
-            <h3>Tournament: match history</h3>
+        <div class="panel-card history-section" id="history-section" style="display:none;">
+            <div class="section-heading compact-heading">
+                <p class="section-kicker">Historia</p>
+                <h3>Historia meczow</h3>
+            </div>
             <div id="history-content"></div>
         </div>
-    </div>
+    </section>
 </main>
-
-<div class="bottom-button">
-    <a href="/matches.html">
-        <button>Pokaż wszystkie mecze</button>
-    </a>
-</div>
 <script src="/app.js?v=1"></script>
 </body>
 </html>

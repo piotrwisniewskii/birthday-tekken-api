@@ -2,84 +2,61 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wszystkie mecze</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-
-        th {
-            background-color: #007bff;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        h1 {
-            text-align: center;
-        }
-
-        .back-btn {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .back-btn a button {
-            background-color: #28a745; /* zielony */
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .back-btn a button:hover {
-            background-color: #1e7e34;
-        }
-    </style>
 </head>
-<body>
-<h1>Lista wszystkich meczów</h1>
+<body class="page-matches">
+<main class="page-shell">
+    <section class="hero-panel hero-panel-compact">
+        <div class="hero-copy">
+            <p class="eyebrow">Match archive</p>
+            <h1>Lista wszystkich meczow</h1>
+            <p class="hero-text">
+                Pelna historia pojedynkow zapisanych przez aplikacje, razem z rundami,
+                zwyciezcami i wolnymi losami.
+            </p>
+        </div>
+        <div class="hero-badge-stack">
+            <a class="ghost-link ghost-link-bright" href="/">Powrot do turnieju</a>
+        </div>
+    </section>
 
-<table id="matches-table">
-    <thead>
-    <tr>
-        <th>Turniej</th>
-        <th>ID</th>
-        <th>Gracz 1</th>
-        <th>Gracz 2</th>
-        <th>Zwycięzca</th>
-        <th>Runda</th>
-        <th>Awans (wolny los)</th>
-        <th>Czas meczu</th>
-    </tr>
-    </thead>
-    <tbody>
-    </tbody>
-</table>
+    <section class="panel-card archive-card">
+        <div class="archive-toolbar">
+            <div>
+                <p class="section-kicker">Archiwum</p>
+                <h2>Zapisane mecze</h2>
+            </div>
+            <form action="/api/tournament/matches/delete-all" method="post"
+                  onsubmit="return confirm('Na pewno usunąć WSZYSTKIE mecze? Tej operacji nie można cofnąć.');">
+                <button type="submit" class="danger-btn">Usun wszystkie mecze</button>
+            </form>
+        </div>
 
-<div class="back-btn">
-    <a href="/"><button>⬅ Powrót</button></a>
-</div>
-
-<form action="/api/tournament/matches/delete-all" method="post"
-      onsubmit="return confirm('Na pewno usunąć WSZYSTKIE mecze? Tej operacji nie można cofnąć.');">
-    <button type="submit" class="danger-btn">
-        🗑 Usuń wszystkie mecze
-    </button>
-</form>
+        <div class="table-shell">
+            <table id="matches-table">
+                <thead>
+                <tr>
+                    <th>Turniej</th>
+                    <th>ID</th>
+                    <th>Gracz 1</th>
+                    <th>Gracz 2</th>
+                    <th>Zwyciezca</th>
+                    <th>Runda</th>
+                    <th>Bye</th>
+                    <th>Czas meczu</th>
+                </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
 
 
 <script>
