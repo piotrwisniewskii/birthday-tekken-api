@@ -73,8 +73,11 @@
 					<failOnError>false</failOnError>
 					<dataDirectory>${user.home}/.m2/repository/org/owasp/dependency-check-data</dataDirectory>
 					<nvdValidForHours>168</nvdValidForHours>
-					<format>HTML</format>
-					<format>JSON</format>
+					<outputDirectory>${project.build.directory}</outputDirectory>
+					<formats>
+						<format>HTML</format>
+						<format>JSON</format>
+					</formats>
 					<skipProvidedScope>true</skipProvidedScope>
 				</configuration>
 				<executions>
