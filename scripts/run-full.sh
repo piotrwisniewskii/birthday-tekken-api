@@ -51,20 +51,41 @@ if command -v minikube >/dev/null 2>&1; then
     fi
   fi
 
-  echo ">>> Enabling ingress addon (with retries)"
-  # Retry enabling ingress a few times because the API server can be slow to become ready
-  MAX_RETRIES=5
-  SLEEP_SECONDS=10
-  attempt=1
-  until minikube addons enable ingress >/dev/null 2>&1; do
-    if [ "$attempt" -ge "$MAX_RETRIES" ]; then
-      echo ">>> Warning: failed to enable ingress after ${MAX_RETRIES} attempts. Continuing — you can try 'minikube addons enable ingress' later."
-      break
-    fi
-    echo ">>> Ingress enable attempt ${attempt} failed — retrying in ${SLEEP_SECONDS}s..."
-    attempt=$((attempt+1))
-    sleep ${SLEEP_SECONDS}
-  done
+  echo ">>> Enabling ingress addon..."
+  # Run in background — this call blocks in some minikube versions until pods are Ready.
+  # We pre-pull images via host Docker first so the VM never has to reach registry.k8s.io cold.
+  minikube addons enable ingress &
+  INGRESS_ENABLE_PID=$!
+
+  echo ">>> Pre-loading ingress-nginx images via host Docker (avoids slow pulls inside VM)..."
+  # Wait just enough for the DaemonSet/Deployment manifests to be applied and pods scheduled.
+  sleep 10
+  INGRESS_IMAGES=$(kubectl get pods -n ingress-nginx \
+    -o jsonpath='{range .items[*]}{range .spec.containers[*]}{.image}{"\n"}{end}{range .spec.initContainers[*]}{.image}{"\n"}{end}{end}' \
+    2>/dev/null | sort -u)
+  if [ -n "$INGRESS_IMAGES" ]; then
+    while IFS= read -r img; do
+      [ -z "$img" ] && continue
+      echo ">>> Pulling and loading: $img"
+      docker pull "$img" 2>/dev/null \
+        && minikube image load "$img" 2>/dev/null \
+        && echo "    Loaded: $img" \
+        || echo "    Warning: could not load $img (skipping)"
+    done <<< "$INGRESS_IMAGES"
+  else
+    echo ">>> No ingress pods found yet — skipping image preload"
+  fi
+
+  # Wait for background enable to finish (should be quick now that images are preloaded)
+  wait "$INGRESS_ENABLE_PID" 2>/dev/null || true
+
+  echo ">>> Waiting for ingress-nginx controller to become ready (max 3 min)..."
+  kubectl wait --namespace ingress-nginx \
+    --for=condition=ready pod \
+    --selector=app.kubernetes.io/component=controller \
+    --timeout=180s 2>/dev/null \
+    && echo ">>> Ingress controller is ready." \
+    || echo ">>> Warning: ingress controller not ready yet, continuing anyway."
 else
   echo ">>> Minikube not installed. The script will proceed using the current kubectl context."
 fi
