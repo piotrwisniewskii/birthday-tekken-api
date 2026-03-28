@@ -20,8 +20,8 @@ public class TournamentController {
     }
 
     @PostMapping("/start")
-    public ResponseEntity<TournamentState> start(@RequestBody List<String> players) {
-        tournamentService.start(players);
+    public ResponseEntity<TournamentState> start(@RequestBody StartTournamentRequest request) {
+        tournamentService.start(request.tournamentName(), request.players());
         return ResponseEntity.ok(tournamentService.getState());
     }
 

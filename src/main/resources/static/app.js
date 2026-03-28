@@ -9,31 +9,30 @@ function startTournament() {
     .map(p => p.trim())
     .filter(p => p.length > 0);
 
-  if (!tournamentName) { alert('Please enter a tournament name'); return; }
-  if (players.length < 2) { alert('Please enter at least 2 players'); return; }
+  if (!tournamentName) { alert('Podaj nazwę turnieju'); return; }
+  if (players.length < 2) { alert('Podaj co najmniej 2 graczy'); return; }
 
-  tournamentNameGlobal = tournamentName; // 👈 zapamiętaj globalnie
+  tournamentNameGlobal = tournamentName;
 
-  // Backend oczekuje samej listy graczy
   fetch('/api/tournament/start', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(players)
+    body: JSON.stringify({ tournamentName, players })
   })
   .then(async (res) => {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.message || `HTTP ${res.status}`);
+      throw new Error(data.message || `Błąd HTTP ${res.status}`);
     }
     return res.json();
   })
   .then(state => {
-    // nigdy nie gub nazwy — doklej ją po odpowiedzi
-    currentState = { ...(state || {}), tournamentName: tournamentNameGlobal };
+    currentState = { ...(state || {}) };
+    tournamentNameGlobal = currentState.tournamentName || tournamentNameGlobal;
     showTournament();
     updateDisplay();
   })
-  .catch(err => { alert(err.message || 'Error starting tournament'); });
+  .catch(err => { alert(err.message || 'Nie udało się uruchomić turnieju'); });
 }
 
 function showTournament() {
@@ -45,10 +44,11 @@ function updateDisplay() {
   if (!currentState) return;
 
   document.getElementById('tournament-name').textContent =
-    currentState.tournamentName || currentState.name || '(unnamed)';
+    currentState.tournamentName || tournamentNameGlobal || '(bez nazwy)';
   document.getElementById('current-round').textContent = currentState.round;
 
   const matchesDiv = document.getElementById('matches');
+  const matchesCard = document.querySelector('.matches-card');
   matchesDiv.innerHTML = '';
 
   const statusDiv = document.getElementById('tournament-status');
@@ -56,15 +56,17 @@ function updateDisplay() {
 
   if (currentState.finished && !currentState.thirdPlaceMatchRequired) {
     statusDiv.innerHTML = `
-      <p><strong>Tournament Finished!</strong></p>
-      <p>🏆 Winner: ${currentState.winner}</p>
-      ${currentState.runnerUp ? `<p>🥈 Runner-up: ${currentState.runnerUp}</p>` : ''}
-      ${currentState.thirdPlace ? `<p>🥉 Third Place: ${currentState.thirdPlace}</p>` : ''}
+      <p><strong>Turniej zakończony!</strong></p>
+      <p>🏆 Zwycięzca: ${currentState.winner}</p>
+      ${currentState.runnerUp ? `<p>🥈 2. miejsce: ${currentState.runnerUp}</p>` : ''}
+      ${currentState.thirdPlace ? `<p>🥉 3. miejsce: ${currentState.thirdPlace}</p>` : ''}
     `;
     submitButton.style.display = 'none';
+    matchesCard.style.display = 'none';
   } else {
-    statusDiv.innerHTML = `<p>Tournament in progress - Round ${currentState.round}</p>`;
+    statusDiv.innerHTML = `<p>Turniej trwa - runda ${currentState.round}</p>`;
     submitButton.style.display = 'block';
+    matchesCard.style.display = 'block';
   }
 
   const matches = currentState.thirdPlaceMatchRequired
@@ -77,7 +79,7 @@ function updateDisplay() {
 
     if (match.byeMatch) {
       matchDiv.className += ' bye-match';
-      matchDiv.innerHTML = `<div>${match.player1} advances to next round (bye)</div>`;
+      matchDiv.innerHTML = `<div>${match.player1} awansuje do kolejnej rundy (wolny los)</div>`;
     } else {
       matchDiv.innerHTML = `
         <div class="match-players">
@@ -110,11 +112,11 @@ function submitResults() {
 
     const results = (matches || []).map((match, index) => {
       if (match.byeMatch) {
-        return { ...match, winner: match.player1, tournamentName: tournamentNameGlobal };
+        return { ...match, winner: match.player1 };
       }
       const winner = document.querySelector(`input[name="match${index}"]:checked`)?.value;
-      if (!winner) throw new Error('Please select a winner for all matches');
-      return { ...match, winner, tournamentName: tournamentNameGlobal };
+      if (!winner) throw new Error('Wybierz zwycięzcę we wszystkich meczach');
+      return { ...match, winner };
     });
 
     const endpoint = currentState.thirdPlaceMatchRequired
@@ -133,13 +135,13 @@ function submitResults() {
       return res.json();
     })
     .then(state => {
-      // znów: nie gub nazwy po odpowiedzi
-      currentState = { ...(state || {}), tournamentName: tournamentNameGlobal };
+      currentState = { ...(state || {}) };
+      tournamentNameGlobal = currentState.tournamentName || tournamentNameGlobal;
       updateDisplay();
     })
     .catch(error => {
       console.error('Error:', error);
-      alert(error.message || 'Error submitting results');
+      alert(error.message || 'Nie udało się zapisać wyników');
     });
   } catch (error) {
     alert(error.message);
@@ -159,7 +161,7 @@ function renderHistory(history, thirdPlaceMatch, thirdPlaceWinner) {
   const rounds = {};
   let thirdPlaceHistory = null;
   history.forEach(match => {
-    if (match.round && match.round.toLowerCase().includes('third')) {
+    if (match.round && /third|3\.|trzecie|mecz o 3/i.test(match.round)) {
       thirdPlaceHistory = match; return;
     }
     if (!rounds[match.round]) rounds[match.round] = [];
@@ -176,7 +178,7 @@ function renderHistory(history, thirdPlaceMatch, thirdPlaceWinner) {
         const matchEl = document.createElement('div');
         matchEl.className = 'history-match';
         if (match.byeMatch) {
-          matchEl.innerHTML = `<span class="bye-match">${match.player1} bye</span>`;
+          matchEl.innerHTML = `<span class="bye-match">${match.player1} - wolny los</span>`;
         } else if (match.winner) {
           matchEl.classList.add('winner');
           matchEl.innerHTML = `${match.player1} vs ${match.player2} — <span>Zwycięzca: ${match.winner}</span>`;

@@ -22,7 +22,12 @@ public class TournamentService {
     }
 
 
-    public void start(List<String> players) {
+    public void start(String tournamentName, List<String> players) {
+		String cleanedName = tournamentName == null ? "" : tournamentName.trim();
+		if (cleanedName.isEmpty()) {
+			throw new IllegalArgumentException("Podaj nazwę turnieju.");
+		}
+
 		List<String> cleaned = players == null ? List.of() :
 				players.stream()
 						.filter(Objects::nonNull)
@@ -37,6 +42,7 @@ public class TournamentService {
 		}
 
 		state.getHistory().clear();
+		state.setTournamentName(cleanedName);
 		state.setCurrentPlayers(new ArrayList<>(cleaned));
 		state.setRound(1);
 		List<Match> matches = generateMatches();
@@ -68,12 +74,15 @@ public class TournamentService {
 
 		if (players.size() % 2 != 0) {
 			String bye = players.remove(players.size() - 1);
-			Match byeMatch = new Match(bye, "", "Round " + state.getRound());
+			Match byeMatch = new Match(bye, "", "Runda " + state.getRound());
+			byeMatch.setTournamentName(state.getTournamentName());
 			byeMatch.setWinner(bye);
 			matches.add(byeMatch);
 		}
 		for (int i = 0; i < players.size(); i += 2) {
-			matches.add(new Match(players.get(i), players.get(i + 1), "Round " + state.getRound()));
+			Match match = new Match(players.get(i), players.get(i + 1), "Runda " + state.getRound());
+			match.setTournamentName(state.getTournamentName());
+			matches.add(match);
 		}
 		return matches;
 	}
@@ -87,6 +96,11 @@ public class TournamentService {
 			// defensywnie: jeśli ktoś wysyła roundLabel zamiast round – nie przeszkadza to w zapisie
 			if (match.getWinner() == null && !match.isByeMatch()) {
 				throw new IllegalArgumentException("Invalid winner for match");
+			}
+
+			match.setTournamentName(state.getTournamentName());
+			if (match.getRound() == null || match.getRound().isBlank()) {
+				match.setRound("Runda " + state.getRound());
 			}
 
 			state.getHistory().add(match);
@@ -108,6 +122,7 @@ public class TournamentService {
 		if (nextRound.size() == 1) {
 			state.setFinished(true);
 			state.setWinner(nextRound.get(0));
+			state.setCurrentMatches(List.of());
 
 			// runner-up z ostatniego „normalnego” meczu z tej rundy
 			Match finalMatch = null;
@@ -143,9 +158,9 @@ public class TournamentService {
 				}
 				if (semifinalLosers.size() == 2) {
 					state.setThirdPlaceMatchRequired(true);
-					state.setThirdPlaceMatch(
-							new Match(semifinalLosers.get(0), semifinalLosers.get(1), "Third Place Match")
-					);
+					Match thirdPlaceMatch = new Match(semifinalLosers.get(0), semifinalLosers.get(1), "Mecz o 3. miejsce");
+					thirdPlaceMatch.setTournamentName(state.getTournamentName());
+					state.setThirdPlaceMatch(thirdPlaceMatch);
 				}
 			}
 		} else {
@@ -177,10 +192,12 @@ public class TournamentService {
 			throw new IllegalArgumentException("Invalid winner for third place match");
 		}
 		third.setWinner(winner);
+		third.setTournamentName(state.getTournamentName());
 		state.getHistory().add(third);
 		matchRepository.save(third);
 		state.setThirdPlace(winner);
 		state.setThirdPlaceMatchRequired(false);
+		state.setCurrentMatches(List.of());
 	}
 
 	public TournamentState getState() {
