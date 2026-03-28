@@ -74,7 +74,11 @@ jobs:
         run: ./mvnw -B -q -DskipTests dependency:go-offline
 
       - name: Set up Trivy
-        uses: aquasecurity/setup-trivy@v0.2.2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget -qO - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy --version
 
       - name: Run Trivy dependency scan
         id: dependency_scan
